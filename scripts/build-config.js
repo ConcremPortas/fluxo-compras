@@ -2,7 +2,7 @@
 const fs = require('fs');
 
 const url    = process.env.SUPABASE_URL    || '';
-const key    = process.env.SUPABASE_KEY    || '';
+const key    = process.env.SUPABASE_KEY || process.env.SUPABASE_ANON_KEY || '';
 const bucket = process.env.SUPABASE_BUCKET || 'concrem-fxcp-arquivos';
 
 if (!url || !key) {
