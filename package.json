@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "Sistema de gestão de compras corporativas",
   "scripts": {
+    "build": "node scripts/build-config.js",
     "dev": "vite",
     "preview": "vite preview"
   },
