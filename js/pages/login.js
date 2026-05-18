@@ -183,24 +183,32 @@ Pages.Login = {
     spinner.style.display = 'inline';
 
     try {
-      const todos   = await Storage.list(TABLES.usuarios) || [];
-      const usuario = todos.find(u => (u.email || '').toLowerCase() === email);
+      const todos = await Storage.list(TABLES.usuarios) || [];
 
-      if (!usuario) {
+      // Vários usuários podem ter o mesmo e-mail; diferencia pela senha
+      const candidatos = todos.filter(u => (u.email || '').toLowerCase() === email);
+
+      if (candidatos.length === 0) {
         this._mostrarErro('E-mail não encontrado no sistema.');
         return;
       }
 
-      if (usuario.ativo === false) {
-        this._mostrarErro('Usuário inativo. Contate o administrador.');
-        return;
-      }
+      // Procura o usuário ativo cuja senha bate
+      const usuario = candidatos.find(u => {
+        if (u.ativo === false) return false;
+        const senhaEsperada = u.senha || '123456';
+        return senhaEsperada === senha;
+      });
 
-      // se senha ainda não foi cadastrada aceita '123456' como padrão
-      const senhaEsperada = usuario.senha || '123456';
-      if (senhaEsperada !== senha) {
-        this._mostrarErro('Senha incorreta.');
-        document.getElementById('login-senha').classList.add('error');
+      if (!usuario) {
+        // Verifica se o problema é inativação ou senha errada
+        const temAtivo = candidatos.some(u => u.ativo !== false);
+        if (!temAtivo) {
+          this._mostrarErro('Usuário inativo. Contate o administrador.');
+        } else {
+          this._mostrarErro('Senha incorreta.');
+          document.getElementById('login-senha').classList.add('error');
+        }
         return;
       }
 
