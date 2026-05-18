@@ -60,8 +60,8 @@ Pages.Configuracoes = {
     document.title = 'Fluxo Compras — Configurações';
     App.setPageTitle('Configurações');
 
-    if (App.currentUser?.role !== 'admin') {
-      Components.Toast.error('Acesso restrito ao administrador.');
+    if (!Permissoes.pode('configuracoes', 'configurar')) {
+      Components.Toast.error('Você não tem permissão para acessar Configurações.');
       App.navigate('dashboard');
       return;
     }
@@ -389,8 +389,8 @@ Pages.Configuracoes = {
     const container = document.getElementById('main-content');
     if (!container) return;
 
-    if (App.currentUser?.role !== 'admin') {
-      Components.Toast.error('Acesso restrito ao administrador.');
+    if (!Permissoes.pode('configuracoes', 'configurar')) {
+      Components.Toast.error('Você não tem permissão para acessar Fluxo de Aprovação.');
       App.navigate('dashboard');
       return;
     }
@@ -1197,8 +1197,8 @@ Pages.CentrosCusto = {
     document.title = 'Fluxo Compras — Centros de Custo';
     App.setPageTitle('Centros de Custo');
 
-    if (App.currentUser?.role !== 'admin') {
-      Components.Toast.error('Acesso restrito ao administrador.');
+    if (!Permissoes.pode('centros-custo', 'ver')) {
+      Components.Toast.error('Você não tem permissão para acessar Centros de Custo.');
       App.navigate('dashboard');
       return;
     }
@@ -1218,8 +1218,8 @@ Pages.Alcadas = {
     document.title = 'Fluxo Compras — Alçadas';
     App.setPageTitle('Alçadas');
 
-    if (App.currentUser?.role !== 'admin') {
-      Components.Toast.error('Acesso restrito ao administrador.');
+    if (!Permissoes.pode('alcadas', 'ver')) {
+      Components.Toast.error('Você não tem permissão para acessar Alçadas.');
       App.navigate('dashboard');
       return;
     }

@@ -22,11 +22,27 @@ Pages.Usuarios = {
     document.title = 'Fluxo Compras — Usuários';
     App.setPageTitle('Usuários');
 
-    if (App.currentUser?.role !== 'admin') {
-      Components.Toast.error('Acesso restrito ao administrador.');
+    // Permite: admin, quem tem permissão de usuários, ou líder de grupo
+    const user = App.currentUser;
+    const isAdmin  = user.role === 'admin';
+    const temPerm  = Permissoes.pode('usuarios', 'ver');
+    const lideres  = await this._carregarLideres();
+    const isLider  = !isAdmin && !temPerm && Object.values(lideres).some(lista => {
+      const arr = Array.isArray(lista) ? lista : (lista ? [lista] : []);
+      return arr.some(uid => String(uid) === String(user.id));
+    });
+
+    if (!isAdmin && !temPerm && !isLider) {
+      Components.Toast.error('Você não tem permissão para acessar Usuários.');
       App.navigate('dashboard');
       return;
     }
+
+    // Guardar grupos que este usuário lidera (para filtrar o que pode ver/editar)
+    this._gruposLiderados = isAdmin ? null : Object.keys(lideres).filter(role => {
+      const arr = Array.isArray(lideres[role]) ? lideres[role] : (lideres[role] ? [lideres[role]] : []);
+      return arr.some(uid => String(uid) === String(user.id));
+    });
 
     document.getElementById('main-content').innerHTML = `
       ${Components.pageHeader({
@@ -44,19 +60,31 @@ Pages.Usuarios = {
     const container = document.getElementById('usuarios-container');
     if (!container) return;
 
+    const isAdmin = App.currentUser?.role === 'admin';
+    const canEdit = isAdmin || Permissoes.pode('usuarios', 'editar');
+
     try {
-      const [usuarios, lideres, userMeta] = await Promise.all([
+      const [todosUsuarios, lideres, userMeta] = await Promise.all([
         Storage.list(TABLES.usuarios, { order: { column: 'nome' } }),
         this._carregarLideres(),
         this._carregarUserMeta(),
       ]);
+
+      // Líder só vê usuários dos grupos que lidera
+      const gruposLiderados = this._gruposLiderados;
+      const usuarios = (gruposLiderados && gruposLiderados.length > 0)
+        ? todosUsuarios.filter(u => gruposLiderados.includes(u.role) || String(u.id) === String(App.currentUser?.id))
+        : todosUsuarios;
+
       container.innerHTML = `
         <div class="cfg-aba-header">
           <div>
             <div class="cfg-aba-title">Usuários do Sistema</div>
-            <div class="cfg-aba-sub">Total: ${usuarios.length} usuário${usuarios.length !== 1 ? 's' : ''}</div>
+            <div class="cfg-aba-sub">Total: ${usuarios.length} usuário${usuarios.length !== 1 ? 's' : ''}
+              ${gruposLiderados?.length ? ' <span style="font-size:11px;color:#94a3b8;">(do seu grupo)</span>' : ''}
+            </div>
           </div>
-          <button class="btn btn-primary" id="btn-novo-usuario">＋ Novo Usuário</button>
+          ${canEdit ? '<button class="btn btn-primary" id="btn-novo-usuario">＋ Novo Usuário</button>' : ''}
         </div>
         <div style="overflow-x:auto;">
           <table class="cfg-table">
