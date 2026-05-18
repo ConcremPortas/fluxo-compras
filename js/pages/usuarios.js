@@ -415,7 +415,12 @@ Pages.Usuarios = {
       Components.Modal.hide();
       await this._carregar();
     } catch (e) {
-      Components.Toast.error('Erro ao salvar: ' + e.message);
+      const msg = e.message || '';
+      if (msg.includes('unique') || msg.includes('duplicate') || msg.includes('email_key')) {
+        Components.Toast.error('Este e-mail já está cadastrado. Use um e-mail diferente.');
+      } else {
+        Components.Toast.error('Erro ao salvar: ' + msg);
+      }
     }
   },
 
