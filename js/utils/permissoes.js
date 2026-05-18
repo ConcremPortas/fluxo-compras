@@ -68,6 +68,7 @@ const Permissoes = {
   _grupos:    {},   // { role: { tela: { acao: bool } } }
   _usuarios:  {},   // { userId: { tela: { acao: bool } } }
   _userMeta:  {},   // { userId: { nivel_alcada: string, ... } }
+  _lideres:   {},   // { role: [userId, ...] }
   _carregado: false,
 
   /* ── Carrega do banco ─────────────────────────────────────── */
@@ -83,6 +84,7 @@ const Permissoes = {
       this._grupos    = src._granular_grupos   || {};
       this._usuarios  = src._granular_usuarios || {};
       this._userMeta  = src._user_meta         || {};
+      this._lideres   = src._lideres           || {};
 
       this._carregado = true;
       this._syncAppPermissions();
@@ -91,8 +93,19 @@ const Permissoes = {
       this._grupos    = {};
       this._usuarios  = {};
       this._userMeta  = {};
+      this._lideres   = {};
       this._carregado = true;
     }
+  },
+
+  /* ── Verifica se o usuário logado lidera algum grupo ─────── */
+  _isLiderDeGrupo() {
+    const u = (typeof App !== 'undefined') ? App.currentUser : null;
+    if (!u) return false;
+    return Object.values(this._lideres).some(lista => {
+      const arr = Array.isArray(lista) ? lista : (lista ? [lista] : []);
+      return arr.some(uid => String(uid) === String(u.id));
+    });
   },
 
   /* ── Verifica uma ação em uma tela para o usuário logado ─── */
@@ -115,11 +128,15 @@ const Permissoes = {
 
   /* ── Atalho: verifica se o usuário pode ver (acessar) a tela */
   podeVerTela(tela) {
+    const u = (typeof App !== 'undefined') ? App.currentUser : null;
+    if (!u) return false;
+    if (u.role === 'admin') return true;
+
+    // Líder de grupo sempre pode acessar a tela de usuários
+    if (tela === 'usuarios' && this._isLiderDeGrupo()) return true;
+
     if (!this._carregado) {
       // Antes do carregamento, usa App.PERMISSIONS legado
-      const u = (typeof App !== 'undefined') ? App.currentUser : null;
-      if (!u) return false;
-      if (u.role === 'admin') return true;
       return ((typeof App !== 'undefined' ? App.PERMISSIONS[u.role] : null) || []).includes(tela);
     }
     return this.pode(tela, 'ver');
