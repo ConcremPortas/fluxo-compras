@@ -2869,12 +2869,23 @@
 @media (max-width: 1024px) {
   .nova-req-layout {
     grid-template-columns: 1fr;
+    min-width: 0;
+  }
+  .nova-req-layout > * {
+    min-width: 0;
   }
   .nova-req-sidebar {
     position: static;
   }
   .nova-req-form-row {
     grid-template-columns: 1fr;
+  }
+  .nova-req-itens-wrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .nova-req-itens-table {
+    min-width: 460px;
   }
 
   .info-grid,
@@ -5301,9 +5312,26 @@ input.dp-ativo {
     min-width: 600px;
   }
 
-  /* ---- NOVA REQUISIÇÃO — ocultar coluna unidade ---- */
-  .nova-req-items-table th:nth-child(3),
-  .nova-req-items-table td:nth-child(3) {
+  /* ---- NOVA REQUISIÇÃO — overflow fix ---- */
+  /* Grid items sem min-width ficam mais largos que a coluna — forçar contenção */
+  .nova-req-layout,
+  .nova-req-layout > * {
+    min-width: 0;
+  }
+
+  /* Tabela de itens: scroll horizontal dentro da seção */
+  .nova-req-itens-wrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .nova-req-itens-table {
+    min-width: 460px;
+  }
+
+  /* Ocultar coluna Unidade para ganhar espaço */
+  .nova-req-itens-table th:nth-child(4),
+  .nova-req-itens-table td:nth-child(4) {
     display: none;
   }
 
@@ -5312,7 +5340,22 @@ input.dp-ativo {
     padding: 14px !important;
   }
 
-  /* ---- FILTROS — empilhar ---- */
+  /* ---- FILTROS REQUISIÇÕES ---- */
+  .req-search-wrap {
+    min-width: unset;
+    width: 100%;
+  }
+
+  .req-filter-select {
+    width: 100%;
+  }
+
+  .req-filters-card {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  /* ---- FILTROS COTAÇÕES — empilhar ---- */
   .cot-filters-card {
     flex-direction: column;
     gap: 10px;
