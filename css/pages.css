@@ -5249,3 +5249,238 @@ input.dp-ativo {
 .drawer-btn-salvar:active {
   transform: translateY(0);
 }
+
+/* ============================================================
+   AJUSTES MOBILE POR TELA
+============================================================ */
+
+@media (max-width: 768px) {
+
+  /* ---- DASHBOARD ---- */
+  .dash-kpi-card {
+    padding: 14px !important;
+  }
+
+  .dash-kpi-valor {
+    font-size: 22px !important;
+  }
+
+  canvas {
+    max-height: 200px !important;
+  }
+
+  /* ---- CARDS DE KPI — 2 colunas ---- */
+  .dash-stats-grid {
+    grid-template-columns: 1fr 1fr !important;
+    gap: 10px !important;
+  }
+
+  /* ---- GRÁFICOS DASHBOARD ---- */
+  .dash-charts-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* ---- REQUISIÇÕES — ocultar colunas menos importantes ---- */
+  .ordens-table th:nth-child(4),
+  .ordens-table td:nth-child(4),
+  .ordens-table th:nth-child(7),
+  .ordens-table td:nth-child(7) {
+    display: none;
+  }
+
+  /* ---- TABELAS — scroll horizontal ---- */
+  .ordens-table-wrap,
+  .cfg-tabs-wrap,
+  [class*="table-wrap"] {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .ordens-table,
+  .cfg-table {
+    min-width: 600px;
+  }
+
+  /* ---- NOVA REQUISIÇÃO — ocultar coluna unidade ---- */
+  .nova-req-items-table th:nth-child(3),
+  .nova-req-items-table td:nth-child(3) {
+    display: none;
+  }
+
+  /* ---- APROVAÇÕES ---- */
+  .aprov-card {
+    padding: 14px !important;
+  }
+
+  /* ---- FILTROS — empilhar ---- */
+  .cot-filters-card {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .cot-filters-card > * {
+    width: 100% !important;
+    min-width: unset !important;
+  }
+
+  /* ---- FORMULÁRIOS — coluna única ---- */
+  .drawer-form-row {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* ---- DETALHE REQUISIÇÃO ---- */
+  .detalhe-req-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* ---- DRAWER — largura total ---- */
+  .modal {
+    width: 100vw !important;
+    max-width: 100vw !important;
+    border-radius: 0 !important;
+  }
+
+  /* ---- PILLS — scroll horizontal ---- */
+  .req-status-filters {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding-bottom: 4px;
+  }
+
+  .req-status-filters::-webkit-scrollbar { display: none; }
+
+  /* ---- MODAL DE CONFIRMAÇÃO — bottom sheet ---- */
+  .modal-overlay.modal-center {
+    align-items: flex-end;
+  }
+
+  .modal-center-box {
+    border-radius: 20px 20px 0 0 !important;
+    max-width: 100vw !important;
+    width: 100% !important;
+  }
+
+  /* ---- PÁGINA DE LOGIN ---- */
+  .login-page {
+    grid-template-columns: 1fr !important;
+  }
+
+  .login-brand { display: none !important; }
+
+  .login-form-area {
+    padding: 40px 28px !important;
+    min-height: 100vh;
+  }
+
+  /* ---- CONFIGURAÇÕES ---- */
+  .cfg-tabs-header {
+    overflow-x: auto;
+    flex-wrap: nowrap;
+  }
+
+  .cfg-tab-btn {
+    flex-shrink: 0;
+    font-size: 12px !important;
+    padding: 12px 14px !important;
+  }
+
+  /* ---- PERMISSÕES ---- */
+  .perm-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* ---- CATÁLOGO ---- */
+  .cfg-alcada-input {
+    width: 90px !important;
+  }
+
+  /* ---- TOPBAR ---- */
+  .topbar-user-name {
+    display: none;
+  }
+
+  .topbar-role-badge {
+    display: none;
+  }
+
+  /* ---- PÁGINA HEADER ---- */
+  .page-header {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  /* ---- NOTIFICAÇÕES ---- */
+  .notif-painel {
+    left: 8px !important;
+    right: 8px !important;
+    width: auto !important;
+  }
+
+  /* ---- BOTÃO NOVA REQ — FAB ---- */
+  .btn-nova-req {
+    position: fixed !important;
+    bottom: calc(var(--mobile-nav-height) + 16px) !important;
+    right: 16px !important;
+    z-index: 150 !important;
+    border-radius: 50px !important;
+    padding: 12px 20px !important;
+    box-shadow: 0 4px 16px hsla(142,93%,8%,0.35) !important;
+  }
+
+  /* ---- TOAST MOBILE ---- */
+  #toast-container {
+    left: 8px !important;
+    right: 8px !important;
+    bottom: calc(var(--mobile-nav-height) + 12px) !important;
+    top: auto !important;
+  }
+
+  .toast {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  /* ---- DATEPICKER ---- */
+  #dp-calendario {
+    position: fixed !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    width: 300px !important;
+  }
+
+  /* ---- TOUCH TARGETS (acessibilidade) ---- */
+  button, a, input, select {
+    min-height: 44px;
+  }
+
+  .cfg-btn-acao {
+    width: 36px !important;
+    height: 36px !important;
+  }
+
+  .sidebar-link,
+  .nav-item {
+    padding: 14px 20px !important;
+    min-height: 48px !important;
+  }
+}
+
+/* ---- EXTRA SMALL (< 480px) ---- */
+@media (max-width: 480px) {
+
+  .dash-stats-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  h1[style*="font-size:24px"],
+  h1 {
+    font-size: 20px !important;
+  }
+
+  .btn-nova-req {
+    font-size: 12px !important;
+    padding: 9px 14px !important;
+  }
+}

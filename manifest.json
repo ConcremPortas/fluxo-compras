@@ -1,0 +1,27 @@
+{
+  "name": "FluxoCompras — Concrem",
+  "short_name": "FluxoCompras",
+  "description": "Gestão do ciclo de compras corporativas",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#0a2e16",
+  "theme_color": "#0a2e16",
+  "lang": "pt-BR",
+  "icons": [
+    {
+      "src": "Logos/logo-cores.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "Logos/logo-cores.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [],
+  "categories": ["business", "productivity"]
+}

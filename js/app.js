@@ -95,6 +95,9 @@ const App = {
       }
     }
 
+    // Inicializar banner PWA (fora do fluxo de login)
+    this._initPWAInstall();
+
     // Escutar mudanças de hash
     window.addEventListener('hashchange', () => this._handleRoute());
     this._handleRoute();
@@ -224,11 +227,15 @@ const App = {
     // Roteamento de páginas
     this._routePage(route);
 
+    // Atualizar item ativo na nav inferior mobile
+    this._atualizarNavAtiva?.((route || '').split('/')[0]);
+
     // Ao fazer login: toast de boas-vindas + iniciar polling de badges + notificações
     if (isFirstRender) {
       FluxoAprovacao.carregar();
       this._loadAllBadges().then(() => this._toastBoasVindas());
       Notificacoes.carregar();
+      this._renderMobileNav();
       if (this._badgeInterval) clearInterval(this._badgeInterval);
       this._badgeInterval = setInterval(() => {
         if (App.currentUser) {
@@ -325,6 +332,8 @@ const App = {
           document.getElementById('main-content')?.remove();
           document.getElementById('notif-overlay')?.remove();
           document.getElementById('notif-painel')?.remove();
+          document.getElementById('mobile-nav')?.remove();
+          document.getElementById('pwa-banner')?.remove();
           Components.Toast.info('Sessão encerrada.');
           this.navigate('login');
         },
@@ -672,6 +681,141 @@ const App = {
           '</div>';
       }
     }
+  },
+
+  /* ----------------------------------------------------------
+     NAV INFERIOR MOBILE
+  ---------------------------------------------------------- */
+  _renderMobileNav() {
+    document.getElementById('mobile-nav')?.remove();
+
+    const user = this.currentUser;
+    if (!user) return;
+
+    const ITENS_NAV = [
+      { rota: 'dashboard',    icone: '📊', label: 'Home'      },
+      { rota: 'requisicoes',  icone: '📋', label: 'Req.'      },
+      { rota: 'aprovacoes',   icone: '✅', label: 'Aprovações', badge: true },
+      { rota: 'ordens',       icone: '📦', label: 'Ordens'    },
+      { rota: 'configuracoes',icone: '⚙️', label: 'Config'    },
+    ];
+
+    const allowed = this.PERMISSIONS[user.role] || [];
+    const itensVisiveis = ITENS_NAV.filter(item =>
+      allowed.includes(item.rota) || user.role === 'admin'
+    ).slice(0, 5);
+
+    if (itensVisiveis.length === 0) return;
+
+    const nav = document.createElement('nav');
+    nav.id = 'mobile-nav';
+    nav.className = 'mobile-nav';
+    nav.innerHTML = `
+      <div class="mobile-nav-items">
+        ${itensVisiveis.map(item => `
+          <button class="mobile-nav-item" data-rota="${item.rota}" type="button">
+            <span class="mobile-nav-icon">${item.icone}</span>
+            <span class="mobile-nav-label">${item.label}</span>
+            ${item.badge ? `<span class="mobile-nav-badge" id="mob-badge-${item.rota}"
+              style="display:none">0</span>` : ''}
+          </button>`).join('')}
+      </div>`;
+
+    document.body.appendChild(nav);
+
+    nav.querySelectorAll('.mobile-nav-item').forEach(btn => {
+      btn.addEventListener('click', () => {
+        App.navigate(btn.dataset.rota);
+        this._closeSidebar();
+      });
+    });
+
+    this._atualizarNavAtiva((window.location.hash.replace(/^#\/?/, '') || 'dashboard').split('/')[0]);
+  },
+
+  _atualizarNavAtiva(rota) {
+    document.querySelectorAll('.mobile-nav-item').forEach(btn => {
+      btn.classList.toggle('ativo', btn.dataset.rota === rota);
+    });
+
+    // Atualizar badge de aprovações na nav inferior
+    const badgeAprov = this._badgesPendentes?.['aprovacoes'] || 0;
+    const mobBadge = document.getElementById('mob-badge-aprovacoes');
+    if (mobBadge) {
+      mobBadge.textContent   = badgeAprov > 99 ? '99+' : String(badgeAprov);
+      mobBadge.style.display = badgeAprov > 0 ? 'flex' : 'none';
+    }
+  },
+
+  /* ----------------------------------------------------------
+     PWA — BANNER DE INSTALAÇÃO
+  ---------------------------------------------------------- */
+  _initPWAInstall() {
+    let deferredPrompt = null;
+
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredPrompt = e;
+
+      if (localStorage.getItem('pwa_dispensado')) return;
+
+      const banner = document.createElement('div');
+      banner.id = 'pwa-banner';
+      banner.style.cssText = `
+        position:fixed;bottom:${window.innerWidth<=768 ? '72px' : '16px'};
+        left:16px;right:16px;max-width:400px;margin:0 auto;
+        background:hsl(142,93%,8%);color:white;
+        border-radius:16px;padding:14px 18px;
+        display:flex;align-items:center;gap:12px;
+        box-shadow:0 8px 30px rgba(0,0,0,0.25);
+        z-index:500;animation:slideUp 0.4s cubic-bezier(0.34,1.56,0.64,1) forwards;
+        font-family:'Manrope',sans-serif;`;
+
+      banner.innerHTML = `
+        <img src="Logos/logo-cores.png" style="width:36px;height:36px;
+          border-radius:8px;flex-shrink:0" alt="FluxoCompras">
+        <div style="flex:1;min-width:0">
+          <div style="font-size:13px;font-weight:700;margin-bottom:2px">
+            Instalar FluxoCompras
+          </div>
+          <div style="font-size:11px;color:rgba(255,255,255,0.70)">
+            Acesso rápido na tela inicial do seu dispositivo
+          </div>
+        </div>
+        <button id="pwa-instalar" style="padding:8px 14px;background:#6ee7b7;
+          color:hsl(142,93%,8%);border:none;border-radius:8px;font-size:12px;
+          font-weight:700;cursor:pointer;white-space:nowrap;font-family:'Manrope',sans-serif">
+          Instalar
+        </button>
+        <button id="pwa-dispensar" style="padding:6px;background:none;
+          border:none;color:rgba(255,255,255,0.60);cursor:pointer;font-size:16px">
+          ✕
+        </button>`;
+
+      document.body.appendChild(banner);
+
+      document.getElementById('pwa-instalar')?.addEventListener('click', async () => {
+        banner.remove();
+        if (deferredPrompt) {
+          deferredPrompt.prompt();
+          const { outcome } = await deferredPrompt.userChoice;
+          if (outcome === 'accepted') {
+            Components.Toast.success('FluxoCompras instalado com sucesso! 🎉');
+          }
+          deferredPrompt = null;
+        }
+      });
+
+      document.getElementById('pwa-dispensar')?.addEventListener('click', () => {
+        banner.remove();
+        localStorage.setItem('pwa_dispensado', '1');
+      });
+    });
+
+    window.addEventListener('appinstalled', () => {
+      Components.Toast.success('FluxoCompras instalado! Acesse pela tela inicial.');
+      document.getElementById('pwa-banner')?.remove();
+    });
   },
 
   /* ----------------------------------------------------------
