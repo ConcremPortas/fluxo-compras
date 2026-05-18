@@ -1061,9 +1061,9 @@ Pages.Configuracoes = {
     const currentId       = String(App.currentUser?.id);
     const usuario         = editando ? usuarios.find(u => String(u.id) === String(userId)) : null;
     const overrideAtual   = editando ? (Permissoes._usuarios[userId] || {}) : {};
-    // Modo líder: oculta a linha de Configurações para não poder conceder esse acesso
+    // Modo líder: oculta Configurações e Usuários para não poder conceder esses acessos
     const TELAS           = modoLider
-      ? Permissoes.TELAS_CONFIG.filter(t => t.id !== 'configuracoes')
+      ? Permissoes.TELAS_CONFIG.filter(t => t.id !== 'configuracoes' && t.id !== 'usuarios')
       : Permissoes.TELAS_CONFIG;
     const ACOESALL        = Permissoes.ACOES;
     const ALBL            = { ver: 'Ver', criar: 'Criar', editar: 'Editar', excluir: 'Excluir', aprovar: 'Aprovar', exportar: 'Exportar', configurar: 'Config.' };
