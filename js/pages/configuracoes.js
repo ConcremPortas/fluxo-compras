@@ -60,7 +60,11 @@ Pages.Configuracoes = {
     document.title = 'Fluxo Compras — Configurações';
     App.setPageTitle('Configurações');
 
-    if (!Permissoes.pode('configuracoes', 'configurar')) {
+    const user    = App.currentUser;
+    const isAdmin = user?.role === 'admin';
+    const isLider = !isAdmin && Permissoes._isLiderDeGrupo();
+
+    if (!isAdmin && !isLider && !Permissoes.pode('configuracoes', 'configurar')) {
       Components.Toast.error('Você não tem permissão para acessar Configurações.');
       App.navigate('dashboard');
       return;
@@ -69,11 +73,13 @@ Pages.Configuracoes = {
     document.getElementById('main-content').innerHTML = `
       ${Components.pageHeader({
         title:    'Configurações',
-        subtitle: 'Permissões de acesso por perfil',
+        subtitle: isLider
+          ? 'Configure permissões individuais para os usuários do seu grupo'
+          : 'Permissões de acesso por perfil',
       })}
       <div id="tab-permissoes"></div>`;
 
-    await this.carregarAbaPermissoes();
+    await this.carregarAbaPermissoes(isLider);
   },
 
   /* ============================================================
@@ -773,12 +779,27 @@ Pages.Configuracoes = {
   /* ============================================================
      ABA 3 — PERMISSÕES GRANULARES
      ============================================================ */
-  async carregarAbaPermissoes() {
+  async carregarAbaPermissoes(modoLider = false) {
     const painel = document.getElementById('tab-permissoes');
     if (!painel) return;
 
     await Permissoes.carregar();
 
+    // Líder de grupo: exibe apenas painel de overrides individuais filtrado pelo seu grupo
+    if (modoLider) {
+      painel.innerHTML = `
+        <div class="cfg-aba-header">
+          <div>
+            <div class="cfg-aba-title">Permissões dos Usuários</div>
+            <div class="cfg-aba-sub">Configure permissões individuais para os usuários do seu grupo</div>
+          </div>
+        </div>
+        <div id="perm-painel-usuarios" style="margin-top:4px;"></div>`;
+      this._renderPainelUsuarios(true);
+      return;
+    }
+
+    // Admin / configurar: exibe subtabs completas
     painel.innerHTML = `
       <div class="cfg-aba-header">
         <div>
@@ -800,7 +821,7 @@ Pages.Configuracoes = {
         const isGrupos = btn.dataset.subtab === 'grupos';
         document.getElementById('perm-painel-grupos').style.display   = isGrupos ? '' : 'none';
         document.getElementById('perm-painel-usuarios').style.display = isGrupos ? 'none' : '';
-        if (!isGrupos) this._renderPainelUsuarios();
+        if (!isGrupos) this._renderPainelUsuarios(false);
       });
     });
 
@@ -950,15 +971,31 @@ Pages.Configuracoes = {
     });
   },
 
-  async _renderPainelUsuarios() {
+  async _renderPainelUsuarios(modoLider = false) {
     const painel = document.getElementById('perm-painel-usuarios');
     if (!painel) return;
 
     painel.innerHTML = '<div style="padding:32px;color:#9ca3af;text-align:center;">Carregando...</div>';
 
     try {
-      const usuarios     = await Storage.getUsuarios().catch(() => []);
+      let usuarios = await Storage.getUsuarios().catch(() => []);
+
+      if (modoLider) {
+        const currentId = String(App.currentUser?.id);
+        // Grupos que este usuário lidera
+        const gruposLiderados = Object.keys(Permissoes._lideres).filter(role => {
+          const lista = Permissoes._lideres[role];
+          const arr = Array.isArray(lista) ? lista : (lista ? [lista] : []);
+          return arr.some(uid => String(uid) === currentId);
+        });
+        // Apenas usuários dos grupos liderados, excluindo o próprio líder
+        usuarios = usuarios.filter(u =>
+          gruposLiderados.includes(u.role) && String(u.id) !== currentId
+        );
+      }
+
       this._todosUsuarios = usuarios;
+      this._modoLider = modoLider;
       const overrides    = Permissoes._usuarios || {};
       const comOverride  = usuarios.filter(u => overrides[u.id] && Object.keys(overrides[u.id]).length > 0);
 
@@ -1004,29 +1041,34 @@ Pages.Configuracoes = {
             </div>`}`;
 
       document.getElementById('btn-add-override')?.addEventListener('click', () =>
-        this._abrirModalOverride(null, usuarios)
+        this._abrirModalOverride(null, usuarios, modoLider)
       );
       painel.querySelectorAll('.btn-edit-override').forEach(btn =>
-        btn.addEventListener('click', () => this._abrirModalOverride(btn.dataset.uid, usuarios))
+        btn.addEventListener('click', () => this._abrirModalOverride(btn.dataset.uid, usuarios, modoLider))
       );
       painel.querySelectorAll('.btn-remove-override').forEach(btn =>
-        btn.addEventListener('click', () => this._removerOverride(btn.dataset.uid, usuarios))
+        btn.addEventListener('click', () => this._removerOverride(btn.dataset.uid, usuarios, modoLider))
       );
     } catch (e) {
       painel.innerHTML = `<div style="padding:20px;color:#ef4444;">Erro ao carregar: ${Utils.escapeHtml(e.message)}</div>`;
     }
   },
 
-  _abrirModalOverride(userId, usuarios) {
+  _abrirModalOverride(userId, usuarios, modoLider = false) {
     this._todosUsuarios = usuarios;
 
     const editando        = !!userId;
+    const currentId       = String(App.currentUser?.id);
     const usuario         = editando ? usuarios.find(u => String(u.id) === String(userId)) : null;
     const overrideAtual   = editando ? (Permissoes._usuarios[userId] || {}) : {};
-    const TELAS           = Permissoes.TELAS_CONFIG;
+    // Modo líder: oculta a linha de Configurações para não poder conceder esse acesso
+    const TELAS           = modoLider
+      ? Permissoes.TELAS_CONFIG.filter(t => t.id !== 'configuracoes')
+      : Permissoes.TELAS_CONFIG;
     const ACOESALL        = Permissoes.ACOES;
     const ALBL            = { ver: 'Ver', criar: 'Criar', editar: 'Editar', excluir: 'Excluir', aprovar: 'Aprovar', exportar: 'Exportar', configurar: 'Config.' };
-    const usuariosFiltrados = usuarios.filter(u => u.role !== 'admin');
+    // Exclui admin e o próprio usuário logado da lista de seleção
+    const usuariosFiltrados = usuarios.filter(u => u.role !== 'admin' && String(u.id) !== currentId);
     const primeiroUsr     = !editando ? usuariosFiltrados[0] : null;
 
     const userHtml = editando
@@ -1097,7 +1139,7 @@ Pages.Configuracoes = {
 
     document.getElementById('btn-override-cancelar')?.addEventListener('click', () => Components.Modal.hide());
     document.getElementById('btn-override-salvar')?.addEventListener('click', () =>
-      this._salvarOverride(editando ? userId : null, usuarios)
+      this._salvarOverride(editando ? userId : null, usuarios, modoLider)
     );
 
     // Para novo override: badge inicial + atualização ao trocar usuário
@@ -1135,11 +1177,16 @@ Pages.Configuracoes = {
     });
   },
 
-  async _salvarOverride(userId, usuarios) {
+  async _salvarOverride(userId, usuarios, modoLider = false) {
     let uid = userId;
     if (!uid) {
       uid = document.getElementById('override-usuario-select')?.value;
       if (!uid) { Components.Toast.warning('Selecione um usuário.'); return; }
+    }
+    // Impede que o líder dê permissões a si mesmo
+    if (String(uid) === String(App.currentUser?.id)) {
+      Components.Toast.error('Você não pode alterar suas próprias permissões.');
+      return;
     }
 
     const perms = {};
@@ -1161,14 +1208,14 @@ Pages.Configuracoes = {
       await Permissoes.salvarUsuarioOverride(uid, perms);
       Components.Modal.hide();
       Components.Toast.success('Override salvo com sucesso!');
-      this._renderPainelUsuarios();
+      this._renderPainelUsuarios(modoLider);
     } catch (e) {
       Components.Toast.error('Erro ao salvar: ' + e.message);
       if (btn) { btn.disabled = false; btn.textContent = userId ? '💾 Salvar Override' : '＋ Criar Override'; }
     }
   },
 
-  _removerOverride(userId, usuarios) {
+  _removerOverride(userId, usuarios, modoLider = false) {
     const u = usuarios.find(x => String(x.id) === String(userId));
     Components.Modal.confirm({
       title:        'Remover Override',
@@ -1180,7 +1227,7 @@ Pages.Configuracoes = {
         try {
           await Permissoes.removerUsuarioOverride(userId);
           Components.Toast.success('Override removido.');
-          this._renderPainelUsuarios();
+          this._renderPainelUsuarios(modoLider);
         } catch (e) {
           Components.Toast.error('Erro: ' + e.message);
         }

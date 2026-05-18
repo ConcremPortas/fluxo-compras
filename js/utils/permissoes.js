@@ -132,8 +132,8 @@ const Permissoes = {
     if (!u) return false;
     if (u.role === 'admin') return true;
 
-    // Líder de grupo sempre pode acessar a tela de usuários
-    if (tela === 'usuarios' && this._isLiderDeGrupo()) return true;
+    // Líder de grupo sempre pode acessar usuários e configurações (só overrides do grupo)
+    if ((tela === 'usuarios' || tela === 'configuracoes') && this._isLiderDeGrupo()) return true;
 
     if (!this._carregado) {
       // Antes do carregamento, usa App.PERMISSIONS legado
