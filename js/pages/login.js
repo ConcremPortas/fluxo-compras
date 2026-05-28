@@ -111,8 +111,20 @@ Pages.Login = {
               <span class="login-field-error" id="err-senha"></span>
             </div>
 
+            <!-- Verificação Turnstile -->
+            <div class="cf-turnstile"
+              data-sitekey="TURNSTILE_SITE_KEY_PLACEHOLDER"
+              data-theme="light"
+              data-callback="onTurnstileSuccess"
+              data-expired-callback="onTurnstileExpired"
+              data-error-callback="onTurnstileError">
+            </div>
+            <div id="turnstile-status" style="font-size:12px;color:#6b7280;margin-bottom:12px;">
+              🔒 Verificando segurança...
+            </div>
+
             <!-- Botão entrar -->
-            <button class="login-btn-entrar" id="btn-entrar" type="button">
+            <button class="login-btn-entrar" id="btn-entrar" type="button" disabled style="opacity:0.6;cursor:not-allowed;">
               <span id="btn-entrar-text">Entrar →</span>
               <span id="btn-entrar-spinner" style="display:none;">⏳</span>
             </button>
@@ -148,14 +160,11 @@ Pages.Login = {
     const email = (document.getElementById('login-email')?.value || '').trim().toLowerCase();
     const senha = document.getElementById('login-senha')?.value || '';
 
-    // Limpar erros
     document.getElementById('err-email').textContent = '';
     document.getElementById('err-senha').textContent = '';
     document.getElementById('login-erro-geral').style.display = 'none';
 
-    // Validações
     let valido = true;
-
     if (!email) {
       document.getElementById('err-email').textContent = 'Informe seu e-mail.';
       document.getElementById('login-email').classList.add('error');
@@ -163,7 +172,6 @@ Pages.Login = {
     } else {
       document.getElementById('login-email').classList.remove('error');
     }
-
     if (!senha) {
       document.getElementById('err-senha').textContent = 'Informe sua senha.';
       document.getElementById('login-senha').classList.add('error');
@@ -171,10 +179,14 @@ Pages.Login = {
     } else {
       document.getElementById('login-senha').classList.remove('error');
     }
-
     if (!valido) return;
 
-    // Loading state
+    // Verificar Turnstile
+    if (!window._turnstileToken) {
+      this._mostrarErro('Aguarde a verificação de segurança.');
+      return;
+    }
+
     const btn     = document.getElementById('btn-entrar');
     const btnText = document.getElementById('btn-entrar-text');
     const spinner = document.getElementById('btn-entrar-spinner');
@@ -183,55 +195,66 @@ Pages.Login = {
     spinner.style.display = 'inline';
 
     try {
-      const todos = await Storage.list(TABLES.usuarios) || [];
-
-      // Vários usuários podem ter o mesmo e-mail; diferencia pela senha
-      const candidatos = todos.filter(u => (u.email || '').toLowerCase() === email);
-
-      if (candidatos.length === 0) {
-        this._mostrarErro('E-mail não encontrado no sistema.');
-        return;
+      // Suporte a username ou e-mail
+      let emailLogin = email;
+      if (!email.includes('@')) {
+        const { data: userRow } = await _sb
+          .from('concrem_fxcp_usuarios')
+          .select('email')
+          .eq('username', email)
+          .eq('ativo', true)
+          .maybeSingle();
+        if (!userRow) {
+          this._mostrarErro('Usuário não encontrado.');
+          return;
+        }
+        emailLogin = userRow.email;
       }
 
-      // Procura o usuário ativo cuja senha bate
-      const usuario = candidatos.find(u => {
-        if (u.ativo === false) return false;
-        const senhaEsperada = u.senha || '123456';
-        return senhaEsperada === senha;
+      const { data, error } = await _sb.auth.signInWithPassword({
+        email: emailLogin,
+        password: senha,
       });
 
-      if (!usuario) {
-        // Verifica se o problema é inativação ou senha errada
-        const temAtivo = candidatos.some(u => u.ativo !== false);
-        if (!temAtivo) {
-          this._mostrarErro('Usuário inativo. Contate o administrador.');
-        } else {
-          this._mostrarErro('Senha incorreta.');
-          document.getElementById('login-senha').classList.add('error');
-        }
+      if (error) {
+        this._mostrarErro('E-mail ou senha incorretos.');
+        document.getElementById('login-senha').classList.add('error');
         return;
       }
 
-      // Atualizar último acesso (não crítico)
-      Storage.update(TABLES.usuarios, usuario.id, {
-        ultimo_acesso: new Date().toISOString(),
-      }).catch(() => {});
+      // Buscar perfil do usuário
+      const { data: perfil } = await _sb
+        .from('concrem_fxcp_usuarios')
+        .select('*')
+        .eq('id', data.user.id)
+        .maybeSingle();
 
-      // Salvar sessão
+      if (!perfil || !perfil.ativo) {
+        await _sb.auth.signOut();
+        this._mostrarErro('Usuário inativo. Contate o administrador.');
+        return;
+      }
+
+      // Verificar troca de senha obrigatória
+      if (perfil.trocar_senha) {
+        App._perfilPendente = perfil;
+        App.navigate('trocar-senha');
+        return;
+      }
+
       const sessao = {
-        id:     usuario.id,
-        nome:   usuario.nome,
-        email:  usuario.email,
-        role:   usuario.role,
-        avatar: (usuario.nome || '?').charAt(0).toUpperCase(),
+        id:     perfil.id,
+        nome:   perfil.nome,
+        email:  perfil.email,
+        role:   perfil.role,
+        avatar: (perfil.nome || '?').charAt(0).toUpperCase(),
       };
 
       sessionStorage.setItem('fc_usuario_logado', JSON.stringify(sessao));
       App.currentUser = sessao;
       await Permissoes.carregar();
 
-      // Enrich session with nivel_alcada from _user_meta (loaded by Permissoes.carregar)
-      const nivel = Permissoes._userMeta[usuario.id]?.nivel_alcada;
+      const nivel = Permissoes._userMeta[perfil.id]?.nivel_alcada;
       if (nivel) {
         sessao.nivel_alcada = nivel;
         App.currentUser = sessao;

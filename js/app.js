@@ -75,10 +75,32 @@ const App = {
      INICIALIZAÇÃO
   ---------------------------------------------------------- */
   async init() {
-    // Recuperar sessão do sessionStorage
-    const saved = sessionStorage.getItem('fc_usuario_logado');
-    if (saved) {
-      try { this.currentUser = JSON.parse(saved); } catch { this.currentUser = null; }
+    // Verificar sessão Supabase Auth
+    const { data: { session } } = await _sb.auth.getSession();
+    if (session?.user) {
+      const saved = sessionStorage.getItem('fc_usuario_logado');
+      if (saved) {
+        try { this.currentUser = JSON.parse(saved); } catch { this.currentUser = null; }
+      }
+      if (!this.currentUser) {
+        // Sessão Auth existe mas sessionStorage foi limpo — recarregar perfil
+        const { data: perfil } = await _sb
+          .from('concrem_fxcp_usuarios')
+          .select('*')
+          .eq('id', session.user.id)
+          .maybeSingle();
+        if (perfil && perfil.ativo) {
+          this.currentUser = {
+            id: perfil.id, nome: perfil.nome,
+            email: perfil.email, role: perfil.role,
+            avatar: (perfil.nome || '?').charAt(0).toUpperCase(),
+          };
+          sessionStorage.setItem('fc_usuario_logado', JSON.stringify(this.currentUser));
+        }
+      }
+    } else {
+      this.currentUser = null;
+      sessionStorage.removeItem('fc_usuario_logado');
     }
 
     // Verificar e inicializar dados mínimos no primeiro acesso
@@ -320,9 +342,10 @@ const App = {
         danger:       true,
         icon:         '🚪',
         confirmLabel: 'Sair',
-        onConfirm: () => {
-          Notificacoes.fechar();
+        onConfirm: async () => {
+          await _sb.auth.signOut();
           sessionStorage.removeItem('fc_usuario_logado');
+          App.currentUser = null;
           this.currentUser  = null;
           this.currentRoute = null;
           if (this._badgeInterval) { clearInterval(this._badgeInterval); this._badgeInterval = null; }
