@@ -142,6 +142,7 @@ Pages.Login = {
 
     this._bindEvents();
     this._animateCounters();
+    this._initTurnstile();
   },
 
   _bindEvents() {
@@ -310,6 +311,24 @@ Pages.Login = {
         requestAnimationFrame(tick);
       });
     }, 1500);
+  },
+
+  _initTurnstile() {
+    if (!window.turnstile) return;
+    const container = document.querySelector('.cf-turnstile');
+    if (!container) return;
+    // Limpar qualquer widget anterior
+    try { window.turnstile.remove(container); } catch (_) {}
+    // Remover atributos gerados pelo Turnstile para forçar reinicialização
+    container.innerHTML = '';
+    // Re-renderizar o widget
+    window.turnstile.render(container, {
+      sitekey: '0x4AAAAAADXZ9JJBI4r7lXPO',
+      theme: 'light',
+      callback: window.onTurnstileSuccess,
+      'expired-callback': window.onTurnstileExpired,
+      'error-callback': window.onTurnstileError,
+    });
   },
 
 };
