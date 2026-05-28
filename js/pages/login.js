@@ -111,7 +111,6 @@ Pages.Login = {
               <span class="login-field-error" id="err-senha"></span>
             </div>
 
-            <!-- Turnstile é movido aqui dinamicamente pelo render() -->
             <div id="turnstile-slot"></div>
             <div id="turnstile-status" style="font-size:12px;color:#6b7280;margin-bottom:12px;">
               🔒 Verificando segurança...
@@ -301,21 +300,19 @@ Pages.Login = {
   },
 
   _moveTurnstile() {
-    const wrapper = document.getElementById('turnstile-wrapper');
-    const slot    = document.getElementById('turnstile-slot');
-    if (!wrapper || !slot) return;
-    // Mover o widget para dentro do formulário
-    slot.appendChild(wrapper.querySelector('.cf-turnstile'));
-    wrapper.style.display = 'none';
+    const slot = document.getElementById('turnstile-slot');
+    if (!slot) return;
     window._turnstileToken = null;
-    // Resetar status
-    const status = document.getElementById('turnstile-status');
-    if (status) status.textContent = '🔒 Verificando segurança...';
-    const btn = document.getElementById('btn-entrar');
-    if (btn) { btn.disabled = true; btn.style.opacity = '0.6'; btn.style.cursor = 'not-allowed'; }
-    // Re-renderizar o widget
     if (window.turnstile) {
-      try { window.turnstile.reset(); } catch(_) {}
+      try {
+        window.turnstile.render(slot, {
+          sitekey: '0x4AAAAAADXZ9JJBI4r7lXPO',
+          theme: 'light',
+          callback: window.onTurnstileSuccess,
+          'expired-callback': window.onTurnstileExpired,
+          'error-callback': window.onTurnstileError,
+        });
+      } catch(e) { console.warn('[Turnstile]', e); }
     }
   },
 
