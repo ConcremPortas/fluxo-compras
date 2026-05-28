@@ -261,8 +261,8 @@ Pages.Login = {
         sessionStorage.setItem('fc_usuario_logado', JSON.stringify(sessao));
       }
 
-      window.location.href = '/';
-      window.location.reload();
+      window.location.replace('/#dashboard');
+      return;
 
     } catch (e) {
       console.error('[Login]', e);
