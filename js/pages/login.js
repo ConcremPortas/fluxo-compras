@@ -261,7 +261,8 @@ Pages.Login = {
         sessionStorage.setItem('fc_usuario_logado', JSON.stringify(sessao));
       }
 
-      window.location.replace('/#dashboard');
+      sessionStorage.setItem('fc_redirect_after_login', 'dashboard');
+      window.location.reload();
       return;
 
     } catch (e) {

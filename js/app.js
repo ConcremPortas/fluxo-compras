@@ -124,6 +124,15 @@ if (this.currentUser) {
 
     // Escutar mudanças de hash
     window.addEventListener('hashchange', () => this._handleRoute());
+
+    // Verificar redirect pós-login
+    const redirect = sessionStorage.getItem('fc_redirect_after_login');
+    if (redirect && this.currentUser) {
+      sessionStorage.removeItem('fc_redirect_after_login');
+      this.navigate(redirect);
+      return;
+    }
+
     this._handleRoute();
   },
 
