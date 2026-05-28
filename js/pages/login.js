@@ -303,7 +303,9 @@ Pages.Login = {
     const slot = document.getElementById('turnstile-slot');
     if (!slot) return;
     window._turnstileToken = null;
-    if (window.turnstile) {
+
+    const doRender = () => {
+      if (!window.turnstile) return;
       try {
         window.turnstile.render(slot, {
           sitekey: '0x4AAAAAADXZ9JJBI4r7lXPO',
@@ -313,6 +315,18 @@ Pages.Login = {
           'error-callback': window.onTurnstileError,
         });
       } catch(e) { console.warn('[Turnstile]', e); }
+    };
+
+    if (window.turnstile) {
+      doRender();
+    } else {
+      // Aguardar script carregar
+      const interval = setInterval(() => {
+        if (window.turnstile) {
+          clearInterval(interval);
+          doRender();
+        }
+      }, 100);
     }
   },
 
