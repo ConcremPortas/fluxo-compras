@@ -113,7 +113,7 @@ Pages.Login = {
 
             <!-- Verificação Turnstile -->
             <div class="cf-turnstile"
-              data-sitekey="TURNSTILE_SITE_KEY_PLACEHOLDER"
+              data-sitekey="0x4AAAAAAADZ9JJBI4r7lXPO"
               data-theme="light"
               data-callback="onTurnstileSuccess"
               data-expired-callback="onTurnstileExpired"
