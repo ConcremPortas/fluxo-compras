@@ -111,7 +111,13 @@ Pages.Login = {
               <span class="login-field-error" id="err-senha"></span>
             </div>
 
-            <div id="turnstile-slot"></div>
+            <div class="cf-turnstile"
+              data-sitekey="0x4AAAAAADXZ9JJBI4r7lXPO"
+              data-theme="light"
+              data-callback="onTurnstileSuccess"
+              data-expired-callback="onTurnstileExpired"
+              data-error-callback="onTurnstileError">
+            </div>
             <div id="turnstile-status" style="font-size:12px;color:#6b7280;margin-bottom:12px;">
               🔒 Verificando segurança...
             </div>
@@ -129,7 +135,7 @@ Pages.Login = {
 
     this._bindEvents();
     this._animateCounters();
-    this._moveTurnstile();
+    this._initTurnstile();
   },
 
   _bindEvents() {
@@ -299,35 +305,20 @@ Pages.Login = {
     }, 1500);
   },
 
-  _moveTurnstile() {
-    const slot = document.getElementById('turnstile-slot');
-    if (!slot) return;
+  _initTurnstile() {
+    if (!window.turnstile) return;
+    const el = document.querySelector('.cf-turnstile');
+    if (!el) return;
+    // Limpar qualquer widget anterior neste elemento
+    window.turnstile.remove(el);
     window._turnstileToken = null;
-
-    const doRender = () => {
-      if (!window.turnstile) return;
-      try {
-        window.turnstile.render(slot, {
-          sitekey: '0x4AAAAAADXZ9JJBI4r7lXPO',
-          theme: 'light',
-          callback: window.onTurnstileSuccess,
-          'expired-callback': window.onTurnstileExpired,
-          'error-callback': window.onTurnstileError,
-        });
-      } catch(e) { console.warn('[Turnstile]', e); }
-    };
-
-    if (window.turnstile) {
-      doRender();
-    } else {
-      // Aguardar script carregar
-      const interval = setInterval(() => {
-        if (window.turnstile) {
-          clearInterval(interval);
-          doRender();
-        }
-      }, 100);
-    }
+    window.turnstile.render(el, {
+      sitekey: '0x4AAAAAADXZ9JJBI4r7lXPO',
+      theme: 'light',
+      callback: window.onTurnstileSuccess,
+      'expired-callback': window.onTurnstileExpired,
+      'error-callback': window.onTurnstileError,
+    });
   },
 
 };
