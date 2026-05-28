@@ -103,8 +103,10 @@ const App = {
       sessionStorage.removeItem('fc_usuario_logado');
     }
 
-    // Verificar e inicializar dados mínimos no primeiro acesso
-    await this._inicializarDados();
+    // Verificar e inicializar dados mínimos no primeiro acesso (só se logado)
+    if (this.currentUser) {
+      await this._inicializarDados();
+    }
 
     // Carregar permissões granulares (necessário ao refrescar a página)
     if (this.currentUser) {
