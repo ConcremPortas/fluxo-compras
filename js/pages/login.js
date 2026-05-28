@@ -261,6 +261,7 @@ Pages.Login = {
         sessionStorage.setItem('fc_usuario_logado', JSON.stringify(sessao));
       }
 
+      await App._inicializarDados();
       App.navigate('dashboard');
       App._loadAllBadges?.();
       App._toastBoasVindas?.();
