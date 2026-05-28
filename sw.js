@@ -3,8 +3,8 @@
    Cache de assets estáticos para uso offline parcial
 ============================================================ */
 
-const CACHE_NAME    = 'fluxocompras-v1';
-const CACHE_OFFLINE = 'fluxocompras-offline-v1';
+const CACHE_NAME    = 'fluxocompras-v2';
+const CACHE_OFFLINE = 'fluxocompras-offline-v2';
 
 const ASSETS_SHELL = [
   '/',
