@@ -31,12 +31,6 @@ const TABLES = {
 
 const BUCKET = (typeof CONFIG !== 'undefined') ? CONFIG.SUPABASE_BUCKET : 'concrem-fxcp-arquivos';
 
-/* ----------------------------------------------------------
-   Cliente Supabase — inicializado uma única vez
----------------------------------------------------------- */
-const _sb = (SUPABASE_URL !== 'SUPABASE_URL_PLACEHOLDER' && window.supabase)
-  ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY)
-  : null;
 
 /* ----------------------------------------------------------
    Helper interno: lança erro padronizado
