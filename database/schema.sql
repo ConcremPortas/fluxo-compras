@@ -420,18 +420,6 @@ INSERT INTO concrem_fxcp_centros_custo (nome, codigo, ativo) VALUES
   ('Almoxarifado',     'ALM', true)
 ON CONFLICT DO NOTHING;
 
--- Usuários de demonstração
-INSERT INTO concrem_fxcp_usuarios (nome, email, role) VALUES
-  ('Admin Sistema',      'admin@empresa.com',    'admin'),
-  ('Carlos Solicitante', 'carlos@empresa.com',   'solicitante'),
-  ('Ana Supervisora',    'ana@empresa.com',       'supervisor'),
-  ('Bruno Coordenador',  'bruno@empresa.com',     'coordenador'),
-  ('Fernanda Gerente',   'fernanda@empresa.com',  'gerente'),
-  ('Roberto Diretor',    'roberto@empresa.com',   'diretor'),
-  ('Paulo Almoxarife',   'paulo@empresa.com',     'almoxarife'),
-  ('Lucia Qualidade',    'lucia@empresa.com',     'qualidade')
-ON CONFLICT (email) DO NOTHING;
-
 
 -- ============================================================
 -- FIM DO SCHEMA
