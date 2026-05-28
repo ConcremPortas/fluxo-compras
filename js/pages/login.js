@@ -310,7 +310,7 @@ Pages.Login = {
     const el = document.querySelector('.cf-turnstile');
     if (!el) return;
     // Limpar qualquer widget anterior neste elemento
-    window.turnstile.remove(el);
+    try { window.turnstile.remove(el); } catch(_) {}
     window._turnstileToken = null;
     window.turnstile.render(el, {
       sitekey: '0x4AAAAAADXZ9JJBI4r7lXPO',
