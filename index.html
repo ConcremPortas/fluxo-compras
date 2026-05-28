@@ -37,6 +37,17 @@
 </head>
 <body>
 
+  <!-- Turnstile widget — fora do SPA para não ser recriado -->
+  <div id="turnstile-wrapper" style="display:none;">
+    <div class="cf-turnstile"
+      data-sitekey="0x4AAAAAADXZ9JJBI4r7lXPO"
+      data-theme="light"
+      data-callback="onTurnstileSuccess"
+      data-expired-callback="onTurnstileExpired"
+      data-error-callback="onTurnstileError">
+    </div>
+  </div>
+
   <!-- App container principal -->
   <div id="app"></div>
 

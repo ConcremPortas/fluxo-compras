@@ -111,14 +111,8 @@ Pages.Login = {
               <span class="login-field-error" id="err-senha"></span>
             </div>
 
-            <!-- Verificação Turnstile -->
-            <div class="cf-turnstile"
-              data-sitekey="0x4AAAAAADXZ9JJBI4r7lXPO"
-              data-theme="light"
-              data-callback="onTurnstileSuccess"
-              data-expired-callback="onTurnstileExpired"
-              data-error-callback="onTurnstileError">
-            </div>
+            <!-- Turnstile é movido aqui dinamicamente pelo render() -->
+            <div id="turnstile-slot"></div>
             <div id="turnstile-status" style="font-size:12px;color:#6b7280;margin-bottom:12px;">
               🔒 Verificando segurança...
             </div>
@@ -136,6 +130,7 @@ Pages.Login = {
 
     this._bindEvents();
     this._animateCounters();
+    this._moveTurnstile();
   },
 
   _bindEvents() {
@@ -303,6 +298,25 @@ Pages.Login = {
         requestAnimationFrame(tick);
       });
     }, 1500);
+  },
+
+  _moveTurnstile() {
+    const wrapper = document.getElementById('turnstile-wrapper');
+    const slot    = document.getElementById('turnstile-slot');
+    if (!wrapper || !slot) return;
+    // Mover o widget para dentro do formulário
+    slot.appendChild(wrapper.querySelector('.cf-turnstile'));
+    wrapper.style.display = 'none';
+    window._turnstileToken = null;
+    // Resetar status
+    const status = document.getElementById('turnstile-status');
+    if (status) status.textContent = '🔒 Verificando segurança...';
+    const btn = document.getElementById('btn-entrar');
+    if (btn) { btn.disabled = true; btn.style.opacity = '0.6'; btn.style.cursor = 'not-allowed'; }
+    // Re-renderizar o widget
+    if (window.turnstile) {
+      try { window.turnstile.reset(); } catch(_) {}
+    }
   },
 
 };
