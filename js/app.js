@@ -137,6 +137,115 @@ if (this.currentUser) {
   },
 
   /* ----------------------------------------------------------
+     TROCA DE SENHA OBRIGATÓRIA
+  ---------------------------------------------------------- */
+  _mostrarModalTrocarSenha() {
+    const existing = document.getElementById('modal-trocar-senha');
+    if (existing) existing.remove();
+
+    const modal = document.createElement('div');
+    modal.id = 'modal-trocar-senha';
+    modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;z-index:9999;';
+    modal.innerHTML = `
+      <div style="background:#fff;border-radius:12px;padding:32px;width:100%;max-width:400px;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
+        <div style="margin-bottom:24px;">
+          <h2 style="font-size:20px;font-weight:700;color:#111;margin:0 0 8px;">Troca de senha obrigatória</h2>
+          <p style="font-size:14px;color:#6b7280;margin:0;">Por segurança, você precisa definir uma nova senha antes de continuar.</p>
+        </div>
+        <div style="margin-bottom:16px;">
+          <label style="display:block;font-size:12px;font-weight:600;color:#374151;margin-bottom:6px;">NOVA SENHA</label>
+          <input id="ts-nova-senha" type="password" placeholder="Mínimo 8 caracteres"
+            style="width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:14px;outline:none;">
+        </div>
+        <div style="margin-bottom:24px;">
+          <label style="display:block;font-size:12px;font-weight:600;color:#374151;margin-bottom:6px;">CONFIRMAR SENHA</label>
+          <input id="ts-confirmar-senha" type="password" placeholder="Repita a nova senha"
+            style="width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:14px;outline:none;">
+        </div>
+        <p id="ts-erro" style="color:#dc2626;font-size:13px;margin:0 0 16px;min-height:18px;"></p>
+        <button onclick="App._confirmarTrocaSenha()"
+          style="width:100%;padding:12px;background:#0a2e16;color:#fff;border:none;border-radius:8px;font-size:15px;font-weight:600;cursor:pointer;">
+          Salvar nova senha
+        </button>
+      </div>
+    `;
+    document.body.appendChild(modal);
+    document.getElementById('ts-nova-senha').focus();
+  },
+
+  async _confirmarTrocaSenha() {
+    const nova     = document.getElementById('ts-nova-senha').value;
+    const confirma = document.getElementById('ts-confirmar-senha').value;
+    const erro     = document.getElementById('ts-erro');
+
+    if (!nova || nova.length < 8) {
+      erro.textContent = 'A senha deve ter no mínimo 8 caracteres.';
+      return;
+    }
+    if (nova !== confirma) {
+      erro.textContent = 'As senhas não coincidem.';
+      return;
+    }
+
+    erro.style.color = '#6b7280';
+    erro.textContent = 'Salvando...';
+
+    let msgErro = '';
+    try {
+      const { data: result, error } = await _sb.functions.invoke('alterar-senha', {
+        body: { nova_senha: nova }
+      });
+      if (error) {
+        try {
+          const parsed = typeof error.context?.json === 'function'
+            ? await error.context.json()
+            : null;
+          msgErro = parsed?.error || error.message || '';
+        } catch {
+          msgErro = error.message || '';
+        }
+      } else if (result?.error) {
+        msgErro = result.error;
+      }
+    } catch(e) {
+      msgErro = e.message || 'Erro inesperado.';
+    }
+
+    if (msgErro) {
+      erro.style.color = '#dc2626';
+      if (msgErro.toLowerCase().includes('weak') || msgErro.toLowerCase().includes('easy to guess')) {
+        erro.textContent = 'Senha muito fraca. Use letras maiúsculas, minúsculas, números e símbolos.';
+      } else if (msgErro.toLowerCase().includes('já foi utilizada') || msgErro.toLowerCase().includes('anteriormente')) {
+        erro.textContent = msgErro;
+      } else {
+        erro.textContent = 'Erro ao salvar senha. Tente novamente.';
+      }
+      return;
+    }
+
+    document.getElementById('modal-trocar-senha').remove();
+
+    // Finalizar login após troca de senha
+    const perfil = App._perfilPendente;
+    if (perfil) {
+      const sessao = {
+        id:     perfil.id,
+        nome:   perfil.nome,
+        email:  perfil.email,
+        role:   perfil.role,
+        avatar: (perfil.nome || '?').charAt(0).toUpperCase(),
+      };
+      sessionStorage.setItem('fc_usuario_logado', JSON.stringify(sessao));
+      App.currentUser = sessao;
+      await Permissoes.carregar();
+      App._perfilPendente = null;
+      App.navigate('dashboard');
+      App._loadAllBadges?.();
+      App._toastBoasVindas?.();
+    }
+  },
+
+  /* ----------------------------------------------------------
      SEED — Verifica banco e inicializa dados mínimos
   ---------------------------------------------------------- */
   async _inicializarDados() {
@@ -191,6 +300,11 @@ if (this.currentUser) {
   _handleRoute() {
     const hash  = window.location.hash.replace(/^#\/?/, '').trim() || '';
     const route = hash || 'login';
+
+    if (route === 'trocar-senha') {
+      this._mostrarModalTrocarSenha();
+      return;
+    }
 
     // Guard: sem usuário → login
     if (!this.currentUser && route !== 'login') {

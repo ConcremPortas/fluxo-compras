@@ -49,6 +49,12 @@ self.addEventListener('activate', event => {
 self.addEventListener('fetch', event => {
   const url = new URL(event.request.url);
 
+  // Deixar passar recursos externos (fontes, CDNs)
+  if (!url.hostname.includes(self.location.hostname) &&
+      !url.hostname.includes('supabase')) {
+    return;
+  }
+
   if (url.hostname.includes('supabase')) {
     event.respondWith(
       fetch(event.request).catch(() =>
