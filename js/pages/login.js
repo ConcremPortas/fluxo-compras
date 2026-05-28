@@ -10,12 +10,6 @@ Pages.Login = {
   render() {
     document.title = 'Fluxo Compras — Entrar';
 
-    // Limpar widget Turnstile anterior para evitar conflito
-    if (window.turnstile) {
-      try { window.turnstile.remove('.cf-turnstile'); } catch (_) {}
-    }
-    window._turnstileToken = null;
-
     const app = document.getElementById('app');
     app.className = 'login-mode';
 
