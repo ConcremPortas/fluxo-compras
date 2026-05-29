@@ -284,7 +284,7 @@ Pages.Usuarios = {
         </div>
         <div class="drawer-field">
           <label class="drawer-label">E-mail <span class="required">*</span></label>
-          <input type="email" id="usr-email" class="drawer-input" placeholder="nome@concrem.com.br">
+          <input type="email" id="usr-email" class="drawer-input" placeholder="nome@concrem.com.br" autocomplete="off">
         </div>
       </div>
       <div class="drawer-form-row">
@@ -336,7 +336,7 @@ Pages.Usuarios = {
         <label class="drawer-label">Senha <span class="required">*</span></label>
         <div style="position:relative;display:flex;align-items:center;">
           <input type="password" id="usr-senha" class="drawer-input"
-            placeholder="Mínimo 6 caracteres" style="padding-right:38px;">
+            placeholder="Mínimo 6 caracteres" style="padding-right:38px;" autocomplete="new-password">
           <button type="button" tabindex="-1"
             style="position:absolute;right:10px;background:none;border:none;cursor:pointer;
                    font-size:15px;opacity:0.5;padding:0;"
