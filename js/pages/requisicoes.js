@@ -477,10 +477,8 @@ Pages.NovaRequisicao = {
               </div>
               <div class="nova-req-form-row">
                 <div class="nova-req-form-group">
-                  <label class="nova-req-label" for="req-setor">Setor / Centro de Custo<span class="req-required">*</span></label>
-                  <select class="nova-req-select" id="req-setor">
-                    <option value="">— Selecione o setor —</option>
-                  </select>
+                  <label class="nova-req-label">Setor / Centro de Custo<span class="req-required">*</span></label>
+                  <div id="cs-req-setor"></div>
                 </div>
                 <div class="nova-req-form-group">
                   <label class="nova-req-label" for="req-data-necessidade">Data de Necessidade<span class="req-required">*</span></label>
@@ -561,15 +559,8 @@ Pages.NovaRequisicao = {
                     placeholder="Nome do fornecedor (opcional)" />
                 </div>
                 <div class="nova-req-form-group">
-                  <label class="nova-req-label" for="req-pagamento">Forma de Pagamento</label>
-                  <select class="nova-req-select" id="req-pagamento">
-                    <option value="">Selecione...</option>
-                    <option value="Boleto">Boleto</option>
-                    <option value="Transferência">Transferência</option>
-                    <option value="Cartão Corporativo">Cartão Corporativo</option>
-                    <option value="Cheque">Cheque</option>
-                    <option value="Dinheiro">Dinheiro</option>
-                  </select>
+                  <label class="nova-req-label">Forma de Pagamento</label>
+                  <div id="cs-req-pagamento"></div>
                 </div>
               </div>
               <div class="nova-req-form-group">
@@ -675,14 +666,26 @@ Pages.NovaRequisicao = {
       this._setores = ['TI', 'RH', 'Financeiro', 'Operações', 'Administrativo', 'Comercial'].map(n => ({ nome: n }));
     }
 
-    const sel = document.getElementById('req-setor');
-    if (!sel) return;
-    this._setores.forEach(c => {
-      const opt = document.createElement('option');
-      opt.value = c.nome;
-      opt.textContent = c.nome;
-      sel.appendChild(opt);
-    });
+    const opcoes = [{ value: '', label: '— Selecione o setor —' }].concat(
+      this._setores.map(c => ({ value: c.nome, label: c.nome }))
+    );
+    this._csReqSetor = CustomSelect.criar(
+      document.getElementById('cs-req-setor'),
+      opcoes,
+      { placeholder: '— Selecione o setor —', limpar: false, rodape: false, value: '' }
+    );
+    this._csReqPagamento = CustomSelect.criar(
+      document.getElementById('cs-req-pagamento'),
+      [
+        { value: '', label: 'Selecione...' },
+        { value: 'Boleto', label: 'Boleto' },
+        { value: 'Transferência', label: 'Transferência' },
+        { value: 'Cartão Corporativo', label: 'Cartão Corporativo' },
+        { value: 'Cheque', label: 'Cheque' },
+        { value: 'Dinheiro', label: 'Dinheiro' },
+      ],
+      { placeholder: 'Selecione...', busca: false, limpar: false, rodape: false, value: '' }
+    );
   },
 
   _adicionarItem() {
@@ -970,14 +973,14 @@ Pages.NovaRequisicao = {
 
     const nome   = (g('req-nome')?.value  || '').trim();
     const email  = (g('req-email')?.value || '').trim();
-    const setor  = (g('req-setor')?.value || '').trim();
+    const setor  = (this._csReqSetor?.getValue() || '').trim();
     const data   = (g('req-data-necessidade')?.value || '').trim();
     const urgente = g('req-urgente')?.checked;
     const justif  = (g('req-justificativa')?.value || '').trim();
 
     mark('req-nome',             !!nome);
     mark('req-email',            !!email && Utils.validateEmail(email));
-    mark('req-setor',            !!setor);
+    if (!setor) this._csReqSetor?.setInvalid(true); else this._csReqSetor?.setInvalid(false);
     mark('req-data-necessidade', !!data);
 
     if (!nome)                              erros.push('Nome do solicitante é obrigatório.');
@@ -1061,7 +1064,7 @@ Pages.NovaRequisicao = {
         numero:                 Utils.generateRC(),
         solicitante_nome:       document.getElementById('req-nome').value.trim(),
         solicitante_email:      document.getElementById('req-email').value.trim(),
-        setor:                  document.getElementById('req-setor').value,
+        setor:                  this._csReqSetor?.getValue() || '',
         data_necessidade:       Utils.getDataISO('req-data-necessidade'),
         data_requisicao:        new Date().toISOString().split('T')[0],
         urgente,
@@ -1069,7 +1072,7 @@ Pages.NovaRequisicao = {
         itens,
         valor_total:            total,
         fornecedor_sugerido:    document.getElementById('req-fornecedor')?.value.trim() || null,
-        forma_pagamento:        document.getElementById('req-pagamento')?.value || null,
+        forma_pagamento:        this._csReqPagamento?.getValue() || null,
         alcada_aprovacao:       Utils.calcAlcada(total),
         observacoes:            document.getElementById('req-observacoes')?.value.trim() || null,
         status:                 FluxoAprovacao.statusInicial(Utils.calcAlcada(total)),
@@ -1502,10 +1505,8 @@ Pages.EditarRequisicao = {
               </div>
               <div class="nova-req-form-row">
                 <div class="nova-req-form-group">
-                  <label class="nova-req-label" for="req-setor">Setor / Centro de Custo<span class="req-required">*</span></label>
-                  <select class="nova-req-select" id="req-setor">
-                    <option value="">— Selecione o setor —</option>
-                  </select>
+                  <label class="nova-req-label">Setor / Centro de Custo<span class="req-required">*</span></label>
+                  <div id="cs-req-setor"></div>
                 </div>
                 <div class="nova-req-form-group">
                   <label class="nova-req-label" for="req-data-necessidade">Data de Necessidade<span class="req-required">*</span></label>
@@ -1584,13 +1585,8 @@ Pages.EditarRequisicao = {
                     placeholder="Nome do fornecedor (opcional)" />
                 </div>
                 <div class="nova-req-form-group">
-                  <label class="nova-req-label" for="req-pagamento">Forma de Pagamento</label>
-                  <select class="nova-req-select" id="req-pagamento">
-                    <option value="">Selecione...</option>
-                    ${['Boleto','Transferência','Cartão Corporativo','Cheque','Dinheiro'].map(v =>
-                      `<option value="${v}" ${req.forma_pagamento === v ? 'selected' : ''}>${v}</option>`
-                    ).join('')}
-                  </select>
+                  <label class="nova-req-label">Forma de Pagamento</label>
+                  <div id="cs-req-pagamento"></div>
                 </div>
               </div>
               <div class="nova-req-form-group">
@@ -1690,23 +1686,30 @@ Pages.EditarRequisicao = {
       this._setores = ['TI', 'RH', 'Financeiro', 'Operações', 'Administrativo', 'Comercial', 'Manutenção'].map(n => ({ nome: n }));
     }
 
-    const sel = document.getElementById('req-setor');
-    if (!sel) return;
-    this._setores.forEach(c => {
-      const opt = document.createElement('option');
-      opt.value = c.nome;
-      opt.textContent = c.nome;
-      if (c.nome === setorAtual) opt.selected = true;
-      sel.appendChild(opt);
-    });
-    // fallback: se o setor atual não estava na lista, adiciona
-    if (setorAtual && !this._setores.find(c => c.nome === setorAtual)) {
-      const opt = document.createElement('option');
-      opt.value = setorAtual;
-      opt.textContent = setorAtual;
-      opt.selected = true;
-      sel.appendChild(opt);
+    const todosSetores = [...this._setores];
+    if (setorAtual && !todosSetores.find(c => c.nome === setorAtual)) {
+      todosSetores.unshift({ nome: setorAtual });
     }
+    const opcoes = [{ value: '', label: '— Selecione o setor —' }].concat(
+      todosSetores.map(c => ({ value: c.nome, label: c.nome }))
+    );
+    this._csReqSetor = CustomSelect.criar(
+      document.getElementById('cs-req-setor'),
+      opcoes,
+      { placeholder: '— Selecione o setor —', limpar: false, rodape: false, value: setorAtual || '' }
+    );
+    this._csReqPagamento = CustomSelect.criar(
+      document.getElementById('cs-req-pagamento'),
+      [
+        { value: '', label: 'Selecione...' },
+        { value: 'Boleto', label: 'Boleto' },
+        { value: 'Transferência', label: 'Transferência' },
+        { value: 'Cartão Corporativo', label: 'Cartão Corporativo' },
+        { value: 'Cheque', label: 'Cheque' },
+        { value: 'Dinheiro', label: 'Dinheiro' },
+      ],
+      { placeholder: 'Selecione...', busca: false, limpar: false, rodape: false, value: this._req?.forma_pagamento || '' }
+    );
   },
 
   _adicionarItem(dadosIniciais) {
@@ -1844,7 +1847,7 @@ Pages.EditarRequisicao = {
     const justif  = (g('req-justificativa')?.value || '').trim();
     mark('req-nome',             !!nome);
     mark('req-email',            !!email && Utils.validateEmail(email));
-    mark('req-setor',            !!setor);
+    if (!setor) this._csReqSetor?.setInvalid(true); else this._csReqSetor?.setInvalid(false);
     mark('req-data-necessidade', !!data);
     if (!nome)                            erros.push('Nome do solicitante é obrigatório.');
     if (!email)                           erros.push('E-mail é obrigatório.');
@@ -1884,14 +1887,14 @@ Pages.EditarRequisicao = {
       const dados = {
         solicitante_nome:       document.getElementById('req-nome').value.trim(),
         solicitante_email:      document.getElementById('req-email').value.trim(),
-        setor:                  document.getElementById('req-setor').value,
+        setor:                  this._csReqSetor?.getValue() || '',
         data_necessidade:       Utils.getDataISO('req-data-necessidade'),
         urgente,
         justificativa_urgencia: urgente ? (document.getElementById('req-justificativa')?.value.trim() || null) : null,
         itens,
         valor_total:            total,
         fornecedor_sugerido:    document.getElementById('req-fornecedor')?.value.trim() || null,
-        forma_pagamento:        document.getElementById('req-pagamento')?.value || null,
+        forma_pagamento:        this._csReqPagamento?.getValue() || null,
         alcada_aprovacao:       Utils.calcAlcada(total),
         observacoes:            document.getElementById('req-observacoes')?.value.trim() || null,
         status:                 FluxoAprovacao.statusInicial(Utils.calcAlcada(total)),
