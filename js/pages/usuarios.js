@@ -232,8 +232,7 @@ Pages.Usuarios = {
           cb.checked = lista.some(uid => String(uid) === String(id));
         });
 
-        const senhaAtual = document.getElementById('usr-senha-atual');
-        if (senhaAtual) senhaAtual.textContent = u.senha || '(sem senha)';
+        // senha não é armazenada na tabela — gerenciada pelo Supabase Auth
       }).catch(() => {});
     }
 
@@ -345,18 +344,10 @@ Pages.Usuarios = {
         </div>
       </div>` : `
       <div class="drawer-field">
-        <label class="drawer-label">Senha Atual</label>
-        <code id="usr-senha-atual"
-          style="display:block;background:#f1f5f9;padding:7px 12px;border-radius:8px;
-                 font-size:13px;color:#334155;font-family:monospace;letter-spacing:.04em;">
-          …
-        </code>
-      </div>
-      <div class="drawer-field">
         <label class="drawer-label">Nova Senha <span style="color:#718096;font-weight:400;">(deixe em branco para manter)</span></label>
         <div style="position:relative;display:flex;align-items:center;">
           <input type="password" id="usr-senha" class="drawer-input"
-            placeholder="Nova senha..." style="padding-right:38px;">
+            placeholder="Nova senha..." style="padding-right:38px;" autocomplete="new-password">
           <button type="button" tabindex="-1"
             style="position:absolute;right:10px;background:none;border:none;cursor:pointer;
                    font-size:15px;opacity:0.5;padding:0;"
@@ -390,27 +381,45 @@ Pages.Usuarios = {
     if (!id && !senha) {
       Components.Toast.warning('Informe uma senha para o novo usuário.'); return;
     }
-    if (senha && senha.length < 6) {
-      Components.Toast.warning('A senha deve ter pelo menos 6 caracteres.'); return;
+    if (senha && senha.length < 8) {
+      Components.Toast.warning('A senha deve ter pelo menos 8 caracteres.'); return;
     }
-
-    // nivel_alcada e lider_do_grupo NÃO vão para a tabela de usuários
-    const payload = { nome, email, role, ativo };
 
     try {
       let savedId = id;
+
       if (id) {
-        await Storage.update(TABLES.usuarios, id, payload);
+        // Atualizar usuário existente (sem senha na tabela)
+        await Storage.update(TABLES.usuarios, id, { nome, email, role, ativo });
+
+        // Alterar senha via Edge Function (somente se informada)
+        if (senha) {
+          const { data: result, error } = await _sb.functions.invoke('alterar-senha-admin', {
+            body: { usuario_id: id, nova_senha: senha }
+          });
+          const msgErro = error?.message || result?.error;
+          if (msgErro) {
+            Components.Toast.error('Usuário salvo, mas erro ao alterar senha: ' + msgErro);
+            await this._salvarUserData(savedId, role, nivel_alcada, lider_do_grupo);
+            Components.Modal.hide();
+            await this._carregar();
+            return;
+          }
+        }
+
         Components.Toast.success('Usuário atualizado!');
       } else {
-        const criado = await Storage.create(TABLES.usuarios, payload);
-        savedId = criado.id;
+        // Criar novo usuário via Edge Function (cria no Auth + tabela)
+        const { data: result, error } = await _sb.functions.invoke('criar-usuario', {
+          body: { nome, email, role, senha }
+        });
+        const msgErro = error?.message || result?.error;
+        if (msgErro) throw new Error(msgErro);
+        savedId = result.id;
         Components.Toast.success('Usuário criado!');
       }
 
-      // Salva metadados extras em configPermissoes (evita erros de coluna inexistente)
       await this._salvarUserData(savedId, role, nivel_alcada, lider_do_grupo);
-
       Components.Modal.hide();
       await this._carregar();
     } catch (e) {
