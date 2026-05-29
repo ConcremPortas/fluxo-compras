@@ -666,14 +666,15 @@ Pages.NovaRequisicao = {
       this._setores = ['TI', 'RH', 'Financeiro', 'Operações', 'Administrativo', 'Comercial'].map(n => ({ nome: n }));
     }
 
+    const opcoesSetor = this._setores.map(c => ({
+      value: c.nome,
+      label: c.nome,
+      group: c.grupo || 'Sem grupo',
+    }));
     this._csReqSetor = CustomSelect.criar(
       document.getElementById('cs-req-setor'),
-      this._setores.map(c => ({
-        value:    c.nome,
-        label:    c.nome,
-        sublabel: c.grupo || null,
-      })),
-      { placeholder: '— Selecione o setor —', busca: true, limpar: false, rodape: false, value: '' }
+      opcoesSetor,
+      { placeholder: '— Selecione o setor —', busca: true, limpar: false, rodape: true, value: '' }
     );
     this._csReqPagamento = CustomSelect.criar(
       document.getElementById('cs-req-pagamento'),
@@ -1747,11 +1748,11 @@ Pages.EditarRequisicao = {
     this._csReqSetor = CustomSelect.criar(
       document.getElementById('cs-req-setor'),
       todosSetores.map(c => ({
-        value:    c.nome,
-        label:    c.nome,
-        sublabel: c.grupo || null,
+        value: c.nome,
+        label: c.nome,
+        group: c.grupo || 'Sem grupo',
       })),
-      { placeholder: '— Selecione o setor —', busca: true, limpar: false, rodape: false, value: setorAtual || '' }
+      { placeholder: '— Selecione o setor —', busca: true, limpar: false, rodape: true, value: setorAtual || '' }
     );
     this._csReqPagamento = CustomSelect.criar(
       document.getElementById('cs-req-pagamento'),
