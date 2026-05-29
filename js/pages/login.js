@@ -235,6 +235,7 @@ Pages.Login = {
         return;
       }
 
+
       // Verificar troca de senha obrigatória
       if (perfil.trocar_senha) {
         App._perfilPendente = perfil;

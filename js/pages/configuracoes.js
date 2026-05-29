@@ -837,10 +837,7 @@ Pages.Configuracoes = {
     painel.innerHTML = `
       <div style="display:flex;align-items:center;gap:12px;margin:16px 0 20px;flex-wrap:wrap;">
         <label style="font-size:13px;font-weight:600;color:#374151;white-space:nowrap;">Perfil:</label>
-        <select id="perm-role-select" class="drawer-select" style="max-width:220px;">
-          ${this.ROLES_EDITAVEIS.map(r => `
-            <option value="${r}" ${r === roleAtual ? 'selected' : ''}>${this.ROLE_LABELS[r] || r} — ${r}</option>`).join('')}
-        </select>
+        <div id="cs-perm-role" style="width:220px;"></div>
         <div id="perm-role-badge-wrap" style="display:flex;align-items:center;gap:6px;"></div>
       </div>
       <div id="perm-grupo-matrix">${this._renderMatrizGrupo(roleAtual)}</div>
@@ -851,11 +848,26 @@ Pages.Configuracoes = {
 
     this._atualizarBadgeRole(roleAtual);
 
-    document.getElementById('perm-role-select')?.addEventListener('change', e => {
-      this._permRoleAtivo = e.target.value;
-      this._atualizarBadgeRole(e.target.value);
-      document.getElementById('perm-grupo-matrix').innerHTML = this._renderMatrizGrupo(e.target.value);
-    });
+    this._csPermRole = CustomSelect.criar(
+      document.getElementById('cs-perm-role'),
+      this.ROLES_EDITAVEIS.map(r => ({
+        value: r,
+        label: `${this.ROLE_LABELS[r] || r} — ${r}`,
+        dotColor: this.ROLE_COLORS[r],
+      })),
+      {
+        placeholder: 'Selecione o perfil...',
+        busca: false,
+        limpar: false,
+        rodape: false,
+        value: roleAtual,
+        onChange: (val) => {
+          this._permRoleAtivo = val;
+          this._atualizarBadgeRole(val);
+          document.getElementById('perm-grupo-matrix').innerHTML = this._renderMatrizGrupo(val);
+        },
+      }
+    );
 
     document.getElementById('btn-salvar-grupo')?.addEventListener('click', () => this._salvarGrupo());
     document.getElementById('btn-restaurar-grupo')?.addEventListener('click', () => this._restaurarGrupoPadrao());
@@ -916,7 +928,7 @@ Pages.Configuracoes = {
   },
 
   async _salvarGrupo() {
-    const role = document.getElementById('perm-role-select')?.value;
+    const role = this._permRoleAtivo || this._csPermRole?.getValue();
     if (!role) return;
 
     const perms = {};
@@ -948,7 +960,7 @@ Pages.Configuracoes = {
   },
 
   _restaurarGrupoPadrao() {
-    const role = document.getElementById('perm-role-select')?.value;
+    const role = this._permRoleAtivo || this._csPermRole?.getValue();
     if (!role) return;
 
     Components.Modal.confirm({
@@ -1078,11 +1090,7 @@ Pages.Configuracoes = {
          </div>`
       : `<div style="margin-bottom:8px;">
            <label class="drawer-label">Usuário</label>
-           <select id="override-usuario-select" class="drawer-select">
-             ${usuariosFiltrados.map(u =>
-               `<option value="${u.id}">${Utils.escapeHtml(u.nome)} — ${this.ROLE_LABELS[u.role] || u.role}</option>`
-             ).join('')}
-           </select>
+           <div id="cs-override-usuario"></div>
            <div id="perm-override-role-badge" style="margin-top:8px;"></div>
          </div>`;
 
@@ -1142,13 +1150,26 @@ Pages.Configuracoes = {
       this._salvarOverride(editando ? userId : null, usuarios, modoLider)
     );
 
-    // Para novo override: badge inicial + atualização ao trocar usuário
+    // Para novo override: instanciar CustomSelect de usuário
     if (!editando) {
+      this._csOverrideUsuario = CustomSelect.criar(
+        document.getElementById('cs-override-usuario'),
+        usuariosFiltrados.map(u => ({
+          value: String(u.id),
+          label: Utils.escapeHtml(u.nome),
+          sublabel: this.ROLE_LABELS[u.role] || u.role,
+          dotColor: this.ROLE_COLORS[u.role],
+        })),
+        {
+          placeholder: 'Selecione um usuário...',
+          value: primeiroUsr ? String(primeiroUsr.id) : '',
+          onChange: (val) => {
+            this._atualizarBadgeOverride(val);
+            this._carregarPermGrupoNoOverride(val);
+          },
+        }
+      );
       if (primeiroUsr) this._atualizarBadgeOverride(String(primeiroUsr.id));
-      document.getElementById('override-usuario-select')?.addEventListener('change', e => {
-        this._atualizarBadgeOverride(e.target.value);
-        this._carregarPermGrupoNoOverride(e.target.value);
-      });
     }
   },
 
@@ -1180,7 +1201,7 @@ Pages.Configuracoes = {
   async _salvarOverride(userId, usuarios, modoLider = false) {
     let uid = userId;
     if (!uid) {
-      uid = document.getElementById('override-usuario-select')?.value;
+      uid = this._csOverrideUsuario?.getValue();
       if (!uid) { Components.Toast.warning('Selecione um usuário.'); return; }
     }
     // Impede que o líder dê permissões a si mesmo
