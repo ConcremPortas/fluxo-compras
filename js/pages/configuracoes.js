@@ -91,6 +91,10 @@ Pages.Configuracoes = {
 
     try {
       const centros = await Storage.list(TABLES.centrosCusto, { order: { column: 'nome' } });
+      this._centrosTodos = centros || [];
+
+      const grupos = [...new Set((centros || []).map(c => c.grupo).filter(Boolean))].sort();
+
       painel.innerHTML = `
         <div class="cfg-aba-header">
           <div>
@@ -98,19 +102,26 @@ Pages.Configuracoes = {
             <div class="cfg-aba-sub">Gerencie os centros de custo disponíveis para requisições</div>
           </div>
           <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-            <button class="btn btn-secondary" id="btn-template-cc"
-                style="font-size:13px;font-weight:600;">
-              📋 Modelo CSV
-            </button>
-            <button class="btn btn-secondary" id="btn-importar-cc"
-                style="font-size:13px;font-weight:600;">
-              📥 Importar CSV
-            </button>
+            <button class="btn btn-secondary" id="btn-template-cc" style="font-size:13px;font-weight:600;">📋 Modelo CSV</button>
+            <button class="btn btn-secondary" id="btn-importar-cc" style="font-size:13px;font-weight:600;">📥 Importar CSV</button>
             <input type="file" id="input-csv-cc" accept=".csv" style="display:none;">
             <button class="btn btn-primary" id="btn-novo-cc">＋ Novo Centro de Custo</button>
           </div>
         </div>
-        <div style="overflow-x:auto;">
+
+        <!-- Filtros -->
+        <div class="req-filters-card" style="margin-bottom:16px;">
+          <div class="req-search-wrap" style="flex:1;min-width:200px;">
+            <span class="req-search-icon">🔍</span>
+            <input type="text" class="req-search-input" id="cc-busca"
+              placeholder="Buscar por código ou nome..." autocomplete="off" />
+          </div>
+          <div id="cs-cc-grupo" style="min-width:180px;"></div>
+          <div id="cs-cc-status" style="min-width:140px;"></div>
+          <span style="font-size:13px;color:#718096;white-space:nowrap;" id="cc-count">— registros</span>
+        </div>
+
+        <div style="overflow-x:auto;" id="cc-tabela-wrap">
           <table class="cfg-table">
             <thead>
               <tr>
@@ -121,13 +132,34 @@ Pages.Configuracoes = {
                 <th style="text-align:center;">Ações</th>
               </tr>
             </thead>
-            <tbody>
-              ${centros.length
-                ? this._renderLinhasCC(centros)
-                : `<tr><td colspan="5" style="text-align:center;padding:32px;color:#A0AEC0;font-size:13px;font-family:'Manrope',sans-serif;">Nenhum centro de custo cadastrado.</td></tr>`}
-            </tbody>
+            <tbody id="cc-tbody"></tbody>
           </table>
         </div>`;
+
+      // CustomSelect — Grupo
+      this._csCCGrupo = CustomSelect.criar(
+        document.getElementById('cs-cc-grupo'),
+        [{ value: '', label: 'Todos os grupos' }].concat(grupos.map(g => ({ value: g, label: g }))),
+        { placeholder: 'Todos os grupos', busca: true, limpar: false, rodape: false, value: '',
+          onChange: () => this._filtrarCC() }
+      );
+
+      // CustomSelect — Status
+      this._csCCStatus = CustomSelect.criar(
+        document.getElementById('cs-cc-status'),
+        [
+          { value: '',     label: 'Todos' },
+          { value: 'true', label: 'Ativos',   dotColor: '#10b981' },
+          { value: 'false',label: 'Inativos', dotColor: '#ef4444' },
+        ],
+        { placeholder: 'Todos', busca: false, limpar: false, rodape: false, value: '',
+          onChange: () => this._filtrarCC() }
+      );
+
+      document.getElementById('cc-busca')
+        ?.addEventListener('input', () => this._filtrarCC());
+
+      this._filtrarCC();
 
       document.getElementById('btn-novo-cc')
         ?.addEventListener('click', () => this.abrirDialogCC());
@@ -157,17 +189,51 @@ Pages.Configuracoes = {
         URL.revokeObjectURL(url);
       });
 
-      painel.querySelectorAll('.btn-editar-cc').forEach(btn =>
-        btn.addEventListener('click', () => this.abrirDialogCC(btn.dataset.id))
-      );
-      painel.querySelectorAll('.btn-toggle-cc').forEach(btn =>
-        btn.addEventListener('click', () =>
-          this.toggleAtivacaoCC(btn.dataset.id, btn.dataset.ativo === 'true')
-        )
-      );
+      this._bindBotoesCC();
     } catch (e) {
       painel.innerHTML = `<p style="padding:24px;color:#718096;font-family:'Manrope',sans-serif;">Erro: ${Utils.escapeHtml(e.message)}</p>`;
     }
+  },
+
+  _filtrarCC() {
+    const busca  = (document.getElementById('cc-busca')?.value || '').toLowerCase().trim();
+    const grupo  = this._csCCGrupo?.getValue()  || '';
+    const status = this._csCCStatus?.getValue() || '';
+
+    const filtrados = (this._centrosTodos || []).filter(cc => {
+      const matchBusca  = !busca  || (cc.nome  || '').toLowerCase().includes(busca)
+                                  || (cc.codigo || '').toLowerCase().includes(busca);
+      const matchGrupo  = !grupo  || cc.grupo === grupo;
+      const matchStatus = !status || String(cc.ativo !== false) === status;
+      return matchBusca && matchGrupo && matchStatus;
+    });
+
+    const tbody = document.getElementById('cc-tbody');
+    const count = document.getElementById('cc-count');
+    if (count) count.textContent = `${filtrados.length} registro${filtrados.length !== 1 ? 's' : ''}`;
+
+    if (!tbody) return;
+
+    if (!filtrados.length) {
+      tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:32px;color:#A0AEC0;font-size:13px;">Nenhum resultado encontrado.</td></tr>`;
+      return;
+    }
+
+    tbody.innerHTML = this._renderLinhasCC(filtrados);
+    this._bindBotoesCC();
+  },
+
+  _bindBotoesCC() {
+    const painel = document.getElementById('tab-centros');
+    if (!painel) return;
+    painel.querySelectorAll('.btn-editar-cc').forEach(btn =>
+      btn.addEventListener('click', () => this.abrirDialogCC(btn.dataset.id))
+    );
+    painel.querySelectorAll('.btn-toggle-cc').forEach(btn =>
+      btn.addEventListener('click', () =>
+        this.toggleAtivacaoCC(btn.dataset.id, btn.dataset.ativo === 'true')
+      )
+    );
   },
 
   _renderLinhasCC(centros) {
