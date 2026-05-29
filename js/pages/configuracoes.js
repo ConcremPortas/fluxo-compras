@@ -852,7 +852,7 @@ Pages.Configuracoes = {
       document.getElementById('cs-perm-role'),
       this.ROLES_EDITAVEIS.map(r => ({
         value: r,
-        label: `${this.ROLE_LABELS[r] || r} — ${r}`,
+        label: this.ROLE_LABELS[r] || r,
         dotColor: this.ROLE_COLORS[r],
       })),
       {
@@ -1155,8 +1155,8 @@ Pages.Configuracoes = {
       this._csOverrideUsuario = CustomSelect.criar(
         document.getElementById('cs-override-usuario'),
         usuariosFiltrados.map(u => ({
-          value: String(u.id),
-          label: Utils.escapeHtml(u.nome),
+          value:    String(u.id),
+          label:    u.nome,
           sublabel: this.ROLE_LABELS[u.role] || u.role,
           dotColor: this.ROLE_COLORS[u.role],
         })),
