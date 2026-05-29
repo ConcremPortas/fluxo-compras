@@ -57,16 +57,12 @@ var CustomSelect = (function () {
 
       /* ── Dropdown ── */
       .cs-dropdown {
-        position: absolute; top: calc(100% + 6px); left: 0; right: 0; z-index: 9999;
+        position: fixed; z-index: 9999;
         background: #ffffff; border: 1.5px solid hsl(142,93%,8%); border-radius: 12px;
         box-shadow: 0 8px 28px rgba(0,0,0,.13); overflow: hidden;
         animation: csDropIn .15s ease;
       }
-      @keyframes csDropIn { from { opacity:0; transform:translateY(-6px) } to { opacity:1; transform:translateY(0) } }
-
-      /* ── Posição acima (quando não cabe abaixo) ── */
-      .cs-dropdown.above { top: auto; bottom: calc(100% + 6px); animation: csDropUp .15s ease; }
-      @keyframes csDropUp { from { opacity:0; transform:translateY(6px) } to { opacity:1; transform:translateY(0) } }
+      @keyframes csDropIn { from { opacity:0; transform:translateY(-4px) } to { opacity:1; transform:translateY(0) } }
 
       /* ── Busca ── */
       .cs-search-wrap { padding: 8px 10px; border-bottom: 1px solid #f3f4f6; position: relative; }
@@ -184,13 +180,24 @@ var CustomSelect = (function () {
      Verificar se dropdown cabe abaixo ou vai acima
   ---------------------------------------------------------- */
   function _ajustarPosicao(trigger, dropdown) {
-    var rect = trigger.getBoundingClientRect();
+    var rect       = trigger.getBoundingClientRect();
     var spaceBelow = window.innerHeight - rect.bottom;
     var spaceAbove = rect.top;
+
+    // Usar position:fixed para evitar clipping por overflow nos containers pai
+    dropdown.style.position = 'fixed';
+    dropdown.style.width    = rect.width + 'px';
+    dropdown.style.left     = rect.left + 'px';
+    dropdown.style.right    = 'auto';
+    dropdown.style.top      = '';
+    dropdown.style.bottom   = '';
+
     if (spaceBelow < 260 && spaceAbove > spaceBelow) {
-      dropdown.classList.add('above');
+      dropdown.style.bottom = (window.innerHeight - rect.top) + 'px';
+      dropdown.style.top    = 'auto';
     } else {
-      dropdown.classList.remove('above');
+      dropdown.style.top    = (rect.bottom + 4) + 'px';
+      dropdown.style.bottom = 'auto';
     }
   }
 
