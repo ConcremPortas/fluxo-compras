@@ -206,8 +206,8 @@ Pages.Recebimento = {
         <div class="drawer-form-row" style="margin-bottom:12px;">
           <div class="drawer-field">
             <label class="drawer-label" for="numero-nf">Número da Nota Fiscal *</label>
-            <input type="text" class="drawer-input" id="numero-nf"
-              placeholder="Ex: NF-001234" />
+            <input type="number" class="drawer-input" id="numero-nf"
+              placeholder="Ex: 001234" min="0" step="1" inputmode="numeric" />
           </div>
           <div class="drawer-field">
             <label class="drawer-label" for="data-recebimento">Data de Recebimento</label>
