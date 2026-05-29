@@ -110,7 +110,7 @@ Pages.Configuracoes = {
         </div>
 
         <!-- Filtros -->
-        <div class="req-filters-card" style="margin-bottom:16px;">
+        <div class="req-filters-card" style="margin-bottom:16px;position:relative;z-index:100;overflow:visible;">
           <div class="req-search-wrap" style="flex:1;min-width:200px;">
             <span class="req-search-icon">🔍</span>
             <input type="text" class="req-search-input" id="cc-busca"
