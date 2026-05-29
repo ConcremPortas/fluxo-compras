@@ -253,13 +253,11 @@ Pages.Cotacoes = {
 
     this._csCotRequisicao = CustomSelect.criar(
       document.getElementById('cs-select-requisicao'),
-      [{ value: '', label: '— Selecione a requisição —' }].concat(
-        this._requisicoesDisp.map(r => ({
-          value:    String(r.id),
-          label:    `${r.numero} — ${r.setor || ''}`,
-          sublabel: Utils.formatCurrency(r.valor_total),
-        }))
-      ),
+      this._requisicoesDisp.map(r => ({
+        value:    String(r.id),
+        label:    `${r.numero} — ${r.setor || ''}`,
+        sublabel: Utils.formatCurrency(r.valor_total),
+      })),
       { placeholder: '— Selecione a requisição —', limpar: false, rodape: false, value: '' }
     );
 
@@ -863,16 +861,14 @@ Pages.DetalheCotacao = {
 
     this._csCotFornecedor = CustomSelect.criar(
       document.getElementById('cs-select-fornecedor'),
-      [{ value: '', label: '— Selecione —' }].concat(
-        disponiveis.map(f => ({
-          value:    String(f.id),
-          label:    f.nome,
-          sublabel: f.cnpj || '',
-          badge:    f.nota_media_qualidade ? `⭐ ${f.nota_media_qualidade}` : null,
-          badgeColor: 'green',
-        }))
-      ),
-      { placeholder: '— Selecione —', limpar: false, rodape: false, value: '' }
+      disponiveis.map(f => ({
+        value:      String(f.id),
+        label:      f.nome,
+        sublabel:   f.cnpj || '',
+        badge:      f.nota_media_qualidade ? `⭐ ${f.nota_media_qualidade}` : null,
+        badgeColor: 'green',
+      })),
+      { placeholder: '— Selecione o fornecedor —', limpar: false, rodape: false, value: '' }
     );
 
     document.getElementById('btn-cancelar-add-forn')?.addEventListener('click', () => Components.Modal.hide());

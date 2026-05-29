@@ -666,18 +666,14 @@ Pages.NovaRequisicao = {
       this._setores = ['TI', 'RH', 'Financeiro', 'Operações', 'Administrativo', 'Comercial'].map(n => ({ nome: n }));
     }
 
-    const opcoes = [{ value: '', label: '— Selecione o setor —' }].concat(
-      this._setores.map(c => ({ value: c.nome, label: c.nome }))
-    );
     this._csReqSetor = CustomSelect.criar(
       document.getElementById('cs-req-setor'),
-      opcoes,
+      this._setores.map(c => ({ value: c.nome, label: c.nome })),
       { placeholder: '— Selecione o setor —', limpar: false, rodape: false, value: '' }
     );
     this._csReqPagamento = CustomSelect.criar(
       document.getElementById('cs-req-pagamento'),
       [
-        { value: '', label: 'Selecione...' },
         { value: 'Boleto', label: 'Boleto' },
         { value: 'Transferência', label: 'Transferência' },
         { value: 'Cartão Corporativo', label: 'Cartão Corporativo' },
@@ -1690,12 +1686,9 @@ Pages.EditarRequisicao = {
     if (setorAtual && !todosSetores.find(c => c.nome === setorAtual)) {
       todosSetores.unshift({ nome: setorAtual });
     }
-    const opcoes = [{ value: '', label: '— Selecione o setor —' }].concat(
-      todosSetores.map(c => ({ value: c.nome, label: c.nome }))
-    );
     this._csReqSetor = CustomSelect.criar(
       document.getElementById('cs-req-setor'),
-      opcoes,
+      todosSetores.map(c => ({ value: c.nome, label: c.nome })),
       { placeholder: '— Selecione o setor —', limpar: false, rodape: false, value: setorAtual || '' }
     );
     this._csReqPagamento = CustomSelect.criar(
@@ -1708,7 +1701,7 @@ Pages.EditarRequisicao = {
         { value: 'Cheque', label: 'Cheque' },
         { value: 'Dinheiro', label: 'Dinheiro' },
       ],
-      { placeholder: 'Selecione...', busca: false, limpar: false, rodape: false, value: this._req?.forma_pagamento || '' }
+      { placeholder: 'Selecione a forma de pagamento...', busca: false, limpar: false, rodape: false, value: this._req?.forma_pagamento || '' }
     );
   },
 
