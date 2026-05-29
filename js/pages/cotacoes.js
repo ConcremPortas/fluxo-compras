@@ -238,13 +238,8 @@ Pages.Cotacoes = {
       size:    'sm',
       content: `
         <div class="drawer-field">
-          <label class="drawer-label" for="select-requisicao">
-            Requisição <span class="required">*</span>
-          </label>
-          <select class="drawer-select" id="select-requisicao">
-            <option value="">— Selecione a requisição —</option>
-            ${opcoesReq}
-          </select>
+          <label class="drawer-label">Requisição <span class="required">*</span></label>
+          <div id="cs-select-requisicao"></div>
         </div>
         <div class="drawer-field">
           <label class="drawer-label" for="cot-responsavel">Responsável</label>
@@ -256,12 +251,24 @@ Pages.Cotacoes = {
         <button class="drawer-btn-salvar"   id="btn-criar-cot">💰 Criar Cotação</button>`,
     });
 
+    this._csCotRequisicao = CustomSelect.criar(
+      document.getElementById('cs-select-requisicao'),
+      [{ value: '', label: '— Selecione a requisição —' }].concat(
+        this._requisicoesDisp.map(r => ({
+          value:    String(r.id),
+          label:    `${r.numero} — ${r.setor || ''}`,
+          sublabel: Utils.formatCurrency(r.valor_total),
+        }))
+      ),
+      { placeholder: '— Selecione a requisição —', limpar: false, rodape: false, value: '' }
+    );
+
     document.getElementById('btn-cancelar-nova-cot')?.addEventListener('click', () => Components.Modal.hide());
     document.getElementById('btn-criar-cot')?.addEventListener('click', () => this._criarCotacao());
   },
 
   async _criarCotacao() {
-    const reqId = document.getElementById('select-requisicao')?.value;
+    const reqId = this._csCotRequisicao?.getValue();
     const resp  = document.getElementById('cot-responsavel')?.value.trim();
     if (!reqId) { Components.Toast.warning('Selecione uma requisição.'); return; }
 
@@ -846,27 +853,31 @@ Pages.DetalheCotacao = {
       size:    'sm',
       content: `
         <div class="drawer-field">
-          <label class="drawer-label" for="select-fornecedor">
-            Fornecedor <span class="required">*</span>
-          </label>
-          <select class="drawer-select" id="select-fornecedor">
-            <option value="">— Selecione —</option>
-            ${disponiveis.map(f =>
-              `<option value="${Utils.escapeHtml(String(f.id))}">
-                ${Utils.escapeHtml(f.nome)}
-                ${f.nota_media_qualidade ? ` — ⭐ ${f.nota_media_qualidade}` : ''}
-              </option>`
-            ).join('')}
-          </select>
+          <label class="drawer-label">Fornecedor <span class="required">*</span></label>
+          <div id="cs-select-fornecedor"></div>
         </div>`,
       footer: `
         <button class="drawer-btn-cancelar" id="btn-cancelar-add-forn">Cancelar</button>
         <button class="drawer-btn-salvar"   id="btn-confirmar-add-forn">Adicionar</button>`,
     });
 
+    this._csCotFornecedor = CustomSelect.criar(
+      document.getElementById('cs-select-fornecedor'),
+      [{ value: '', label: '— Selecione —' }].concat(
+        disponiveis.map(f => ({
+          value:    String(f.id),
+          label:    f.nome,
+          sublabel: f.cnpj || '',
+          badge:    f.nota_media_qualidade ? `⭐ ${f.nota_media_qualidade}` : null,
+          badgeColor: 'green',
+        }))
+      ),
+      { placeholder: '— Selecione —', limpar: false, rodape: false, value: '' }
+    );
+
     document.getElementById('btn-cancelar-add-forn')?.addEventListener('click', () => Components.Modal.hide());
     document.getElementById('btn-confirmar-add-forn')?.addEventListener('click', async () => {
-      const fornId = document.getElementById('select-fornecedor')?.value;
+      const fornId = this._csCotFornecedor?.getValue();
       if (!fornId) { Components.Toast.warning('Selecione um fornecedor.'); return; }
 
       const forn = disponiveis.find(f => String(f.id) === String(fornId));
