@@ -2,6 +2,33 @@
    FLUXOCOMPRAS — Utils: Funções utilitárias globais
    ============================================================ */
 
+/* Mapa de cores por status — usado pelo CustomSelect */
+var STATUS_CORES = {
+  'Aguardando Avaliação de Compras':       '#f59e0b',
+  'Aguardando Avaliacao de Compras':       '#f59e0b',
+  'Devolvida ao Solicitante':              '#ef4444',
+  'Aguardando Aprovação da Diretoria':     '#8b5cf6',
+  'Aguardando Aprovacao da Diretoria':     '#8b5cf6',
+  'Aprovada pela Diretoria':               '#10b981',
+  'Não Aprovada':                          '#ef4444',
+  'Em Cotação':                            '#3b82f6',
+  'Aguardando Aprovação do Demandante':    '#f59e0b',
+  'Aguardando Aprovacao do Demandante':    '#f59e0b',
+  'Análise de Faturamento':                '#6366f1',
+  'Ordem de Compra Gerada':                '#10b981',
+  'Aguardando Recebimento':                '#f59e0b',
+  'Aguardando Análise de Qualidade':       '#8b5cf6',
+  'Aguardando Qualidade':                  '#8b5cf6',
+  'Concluída':                             '#10b981',
+  'Cancelada':                             '#6b7280',
+  'Em Andamento':                          '#3b82f6',
+  'Aprovada':                              '#10b981',
+  'Em Revisão':                            '#f59e0b',
+  'Aguardando Aprovacao Etapa 1':          '#f59e0b',
+  'Aguardando Aprovacao Etapa 2':          '#8b5cf6',
+  'Rascunho':                              '#9ca3af',
+};
+
 const Utils = {
 
   /* ----------------------------------------------------------
