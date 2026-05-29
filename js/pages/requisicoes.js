@@ -1135,11 +1135,14 @@ Pages.NovaRequisicao = {
 
       if (!jaExiste) {
         try {
+          // Gerar código automático para a sugestão
+          const codigoSug = 'SUG-' + Date.now().toString().slice(-6);
+
           await Storage.create(TABLES.catalogoItens, {
-            codigo:            null,
+            codigo:            codigoSug,
             descricao:         item.descricao.trim(),
             unidade:           item.unidade || 'UN',
-            categoria:         null,
+            categoria:         requisicao.setor || null,
             preco_ref:         item.valor_unitario || 0,
             observacoes:       `Sugerido via requisição ${requisicao.numero}`,
             ativo:             false,

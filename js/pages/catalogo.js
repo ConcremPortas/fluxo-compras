@@ -188,8 +188,8 @@ Pages.Catalogo = {
         order: { column: 'descricao', ascending: true },
       }) || [];
 
-      // Separar sugestões dos itens normais
-      this._dados      = todos.filter(i => i.status !== 'sugestao');
+      // Separar sugestões dos itens normais (null ou 'ativo' = item normal)
+      this._dados      = todos.filter(i => !i.status || i.status === 'ativo');
       this._sugestoes  = todos.filter(i => i.status === 'sugestao');
 
       // Atualizar badge de sugestões
