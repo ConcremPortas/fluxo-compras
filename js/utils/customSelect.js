@@ -153,9 +153,6 @@ var CustomSelect = (function () {
         width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; display: inline-block;
       }
 
-      /* ── Overlay global para fechar ao clicar fora ── */
-      #cs-overlay { position: fixed; inset: 0; z-index: 9998; display: none; }
-      #cs-overlay.active { display: block; }
     `;
     document.head.appendChild(style);
   }
@@ -171,22 +168,17 @@ var CustomSelect = (function () {
      Estado global
   ---------------------------------------------------------- */
   var _aberto = null;
-  var _overlay = null;
-
-  function _getOverlay() {
-    if (!_overlay) {
-      _overlay = document.createElement('div');
-      _overlay.id = 'cs-overlay';
-      _overlay.addEventListener('click', fecharTodos);
-      document.body.appendChild(_overlay);
-    }
-    return _overlay;
-  }
 
   function fecharTodos() {
     if (_aberto) { _aberto.fechar(); _aberto = null; }
-    _getOverlay().classList.remove('active');
   }
+
+  // Fechar ao clicar fora — sem overlay, compatível com modais
+  document.addEventListener('click', function (e) {
+    if (_aberto && !e.target.closest('.cs-wrap')) {
+      fecharTodos();
+    }
+  }, true);
 
   /* ----------------------------------------------------------
      Verificar se dropdown cabe abaixo ou vai acima
@@ -445,7 +437,6 @@ var CustomSelect = (function () {
       dropdown.style.display = 'block';
       trigger.classList.add('open');
       _ajustarPosicao(trigger, dropdown);
-      _getOverlay().classList.add('active');
       if (inputBusca) { inputBusca.value = ''; inputBusca.focus(); _renderizarOpcoes(); }
     }
 
