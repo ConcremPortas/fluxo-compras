@@ -119,10 +119,15 @@ const Permissoes = {
     if (uPerms !== undefined) return !!uPerms[acao];
 
     // Permissões do grupo (banco)
-    const gPerms = this._grupos[u.role]?.[tela];
-    if (gPerms !== undefined) return !!gPerms[acao];
+    const roleGrupo = this._grupos[u.role];
+    if (roleGrupo !== undefined) {
+      // Grupo tem configuração salva — respeitar exatamente (tela ausente = sem acesso)
+      const gPerms = roleGrupo[tela];
+      if (gPerms !== undefined) return !!gPerms[acao];
+      return false;
+    }
 
-    // Fallback para defaults hard-coded
+    // Nenhuma configuração salva para este grupo — usar defaults hard-coded
     return !!(_DEFAULTS[u.role]?.[tela]?.[acao]);
   },
 
