@@ -396,7 +396,6 @@ Pages.Usuarios = {
 
     // nivel_alcada e lider_do_grupo NÃO vão para a tabela de usuários
     const payload = { nome, email, role, ativo };
-    if (senha) payload.senha = senha;
 
     try {
       let savedId = id;
