@@ -31,14 +31,7 @@ Pages.Ordens = {
           <input class="ordens-search-input" type="text" id="busca-ordens"
             placeholder="Buscar por número, fornecedor ou requisição..." />
         </div>
-        <select class="ordens-filter-select" id="filtro-status-ordens">
-          <option value="todos">Todos os status</option>
-          <option value="Analise de Faturamento">Análise de Faturamento</option>
-          <option value="Aguardando Confirmacao">Aguardando Confirmação</option>
-          <option value="Aguardando Recebimento">Aguardando Recebimento</option>
-          <option value="Recebida">Recebida</option>
-          <option value="Concluida">Concluída</option>
-        </select>
+        <div id="cs-filtro-status-ordens" style="min-width:200px;"></div>
         <span class="ordens-count" id="ordens-count">—</span>
       </div>
 
@@ -46,8 +39,20 @@ Pages.Ordens = {
 
     document.getElementById('busca-ordens')
       ?.addEventListener('input', e => { this._busca = e.target.value; this._renderTabela(); });
-    document.getElementById('filtro-status-ordens')
-      ?.addEventListener('change', e => { this._filtroStatus = e.target.value; this._renderTabela(); });
+
+    CustomSelect.criar(
+      document.getElementById('cs-filtro-status-ordens'),
+      [
+        { value: 'todos',                    label: 'Todos os status' },
+        { value: 'Analise de Faturamento',   label: 'Análise de Faturamento',   dotColor: '#6366f1' },
+        { value: 'Aguardando Confirmacao',   label: 'Aguardando Confirmação',   dotColor: '#f59e0b' },
+        { value: 'Aguardando Recebimento',   label: 'Aguardando Recebimento',   dotColor: '#f59e0b' },
+        { value: 'Recebida',                 label: 'Recebida',                 dotColor: '#10b981' },
+        { value: 'Concluida',                label: 'Concluída',                dotColor: '#10b981' },
+      ],
+      { placeholder: 'Todos os status', busca: false, limpar: false, rodape: false, value: 'todos',
+        onChange: (val) => { this._filtroStatus = val; this._renderTabela(); } }
+    );
 
     this._carregar();
   },

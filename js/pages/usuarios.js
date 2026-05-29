@@ -215,16 +215,35 @@ Pages.Usuarios = {
         <button class="drawer-btn-salvar"   id="btn-salvar-usr">Salvar</button>`,
     });
 
+    // Instanciar CustomSelect de Role
+    this._csUsrRole = CustomSelect.criar(
+      document.getElementById('cs-usr-role'),
+      Object.entries(this.ROLE_LABELS).map(([v, l]) => ({
+        value: v, label: l, dotColor: this.ROLE_COLORS[v],
+      })),
+      { placeholder: 'Selecione o perfil...', busca: false, limpar: false, rodape: false, value: 'solicitante' }
+    );
+
+    // Instanciar CustomSelect de Nível de Alçada
+    this._csUsrNivel = CustomSelect.criar(
+      document.getElementById('cs-usr-nivel-alcada'),
+      [{ value: '', label: 'Sem permissão de aprovação' }].concat(
+        alcadas.map(a => ({ value: a.nome, label: a.nome }))
+      ),
+      { placeholder: 'Sem permissão de aprovação', busca: false, limpar: false, rodape: false, value: '' }
+    );
+
     if (id) {
       Storage.get(TABLES.usuarios, id).then(u => {
         if (!u) return;
-        document.getElementById('usr-nome').value         = u.nome  || '';
-        document.getElementById('usr-email').value        = u.email || '';
-        document.getElementById('usr-role').value         = u.role  || 'solicitante';
-        document.getElementById('usr-ativo').checked      = !!u.ativo;
+        document.getElementById('usr-nome').value    = u.nome  || '';
+        document.getElementById('usr-email').value   = u.email || '';
+        document.getElementById('usr-ativo').checked = !!u.ativo;
+
+        this._csUsrRole?.setValue(u.role || 'solicitante');
 
         // nivel_alcada vem do userMeta, não do registro do usuário
-        document.getElementById('usr-nivel-alcada').value = userMeta[id]?.nivel_alcada || '';
+        this._csUsrNivel?.setValue(userMeta[id]?.nivel_alcada || '');
 
         // Marca checkboxes dos grupos que este usuário lidera
         document.querySelectorAll('.usr-lider-cb').forEach(cb => {
@@ -289,16 +308,11 @@ Pages.Usuarios = {
       <div class="drawer-form-row">
         <div class="drawer-field">
           <label class="drawer-label">Perfil de Acesso <span class="required">*</span></label>
-          <select id="usr-role" class="drawer-select">
-            ${roles.map(([v, l]) => `<option value="${v}">${l}</option>`).join('')}
-          </select>
+          <div id="cs-usr-role"></div>
         </div>
         <div class="drawer-field">
           <label class="drawer-label">Nível de Alçada</label>
-          <select id="usr-nivel-alcada" class="drawer-select">
-            <option value="">Sem permissão de aprovação</option>
-            ${opcoesAlcada}
-          </select>
+          <div id="cs-usr-nivel-alcada"></div>
         </div>
       </div>
       <div class="drawer-field" id="usr-lider-grupo-wrap">
@@ -367,8 +381,8 @@ Pages.Usuarios = {
   async salvarUsuario(id = null) {
     const nome           = document.getElementById('usr-nome')?.value.trim();
     const email          = (document.getElementById('usr-email')?.value || '').trim().toLowerCase();
-    const role           = document.getElementById('usr-role')?.value;
-    const nivel_alcada   = document.getElementById('usr-nivel-alcada')?.value || null;
+    const role           = this._csUsrRole?.getValue() || '';
+    const nivel_alcada   = this._csUsrNivel?.getValue() || null;
     const lider_do_grupo = Array.from(document.querySelectorAll('.usr-lider-cb:checked')).map(cb => cb.value);
     const ativo          = document.getElementById('usr-ativo')?.checked ?? true;
     const senha          = (document.getElementById('usr-senha')?.value || '').trim();
