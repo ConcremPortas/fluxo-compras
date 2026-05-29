@@ -330,23 +330,42 @@ Pages.Configuracoes = {
      IMPORTAÇÃO CSV — CENTROS DE CUSTO
      ============================================================ */
   async _importarCSVCentros(file) {
-    const texto = await new Promise((res, rej) => {
+    // Tentar UTF-8 primeiro; se parecer mal-codificado, tenta latin1
+    const lerArquivo = (enc) => new Promise((res, rej) => {
       const reader = new FileReader();
       reader.onload  = e => res(e.target.result);
       reader.onerror = rej;
-      reader.readAsText(file, 'UTF-8');
+      reader.readAsText(file, enc);
     });
 
-    const sep    = texto.split('\n')[0].includes(';') ? ';' : ',';
-    const linhas = texto.split('\n')
-      .filter(l => l.trim())
-      .map(l => l.split(sep).map(c => c.trim().replace(/^"|"$/g, '')));
+    let texto = await lerArquivo('UTF-8');
+    // Detectar double-encoding (UTF-8 lido como Latin-1 e re-codificado)
+    if (texto.includes('Ã§') || texto.includes('Ã£') || texto.includes('Ã©')) {
+      texto = await lerArquivo('windows-1252');
+    }
+
+    // Parser CSV que respeita campos entre aspas (com vírgulas internas)
+    const parseCsvLinha = (linha, sep) => {
+      const fields = [];
+      let cur = '', inQuote = false;
+      for (let i = 0; i < linha.length; i++) {
+        const c = linha[i];
+        if (c === '"') { inQuote = !inQuote; }
+        else if (c === sep && !inQuote) { fields.push(cur.trim()); cur = ''; }
+        else { cur += c; }
+      }
+      fields.push(cur.trim());
+      return fields;
+    };
+
+    const linhasRaw = texto.split('\n').filter(l => l.trim());
+    const sep       = linhasRaw[0].includes(';') ? ';' : ',';
+    const linhas    = linhasRaw.map(l => parseCsvLinha(l, sep));
 
     if (linhas.length < 2) { Components.Toast.error('CSV inválido ou vazio.'); return; }
 
-    const header = linhas[0].map(h =>
-      h.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim()
-    );
+    const normalizar = h => h.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim();
+    const header = linhas[0].map(normalizar);
 
     const idxCodigo = header.indexOf('codigo');
     const idxNome   = header.indexOf('nome');
@@ -364,12 +383,18 @@ Pages.Configuracoes = {
       if (chave) mapCodigo[chave.toUpperCase()] = cc;
     });
 
-    const linhasDados = linhas.slice(1).filter(l => l.some(c => c));
-    const novos = linhasDados.filter(l => {
-      const cod = idxCodigo >= 0 ? (l[idxCodigo] || '').toUpperCase() : '';
-      return !cod || !mapCodigo[cod];
-    }).length;
-    const atualizados = linhasDados.length - novos;
+    // Montar registros
+    const registros = linhas.slice(1)
+      .filter(l => l.some(c => c))
+      .map(l => ({
+        codigo: idxCodigo >= 0 ? (l[idxCodigo] || '').trim().toUpperCase() : '',
+        nome:   (l[idxNome] || '').trim(),
+        grupo:  idxGrupo >= 0 ? (l[idxGrupo] || '').trim() || null : null,
+      }))
+      .filter(r => r.nome);
+
+    const novosReg     = registros.filter(r => !r.codigo || !mapCodigo[r.codigo]);
+    const atualizReg   = registros.filter(r =>  r.codigo &&  mapCodigo[r.codigo]);
 
     Components.Modal.show({
       title:   '📥 Importar Centros de Custo',
@@ -378,46 +403,48 @@ Pages.Configuracoes = {
         <div style="text-align:center;padding:8px 0 16px;">
           <div style="display:flex;gap:16px;justify-content:center;margin-bottom:16px;">
             <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:14px 20px;min-width:70px;">
-              <div style="font-size:28px;font-weight:800;color:hsl(142,70%,28%);">${linhasDados.length}</div>
+              <div style="font-size:28px;font-weight:800;color:hsl(142,70%,28%);">${registros.length}</div>
               <div style="font-size:11px;color:#64748b;font-weight:600;">Total</div>
             </div>
             <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:14px 20px;min-width:70px;">
-              <div style="font-size:28px;font-weight:800;color:#1d4ed8;">${novos}</div>
+              <div style="font-size:28px;font-weight:800;color:#1d4ed8;">${novosReg.length}</div>
               <div style="font-size:11px;color:#64748b;font-weight:600;">Novos</div>
             </div>
             <div style="background:#fefce8;border:1px solid #fef08a;border-radius:10px;padding:14px 20px;min-width:70px;">
-              <div style="font-size:28px;font-weight:800;color:#a16207;">${atualizados}</div>
+              <div style="font-size:28px;font-weight:800;color:#a16207;">${atualizReg.length}</div>
               <div style="font-size:11px;color:#64748b;font-weight:600;">Atualizados</div>
             </div>
           </div>
           <p style="font-size:12px;color:#64748b;margin:4px 0;">🔄 Centros com mesmo código serão atualizados.</p>
-          <p style="font-size:12px;color:#64748b;margin:4px 0;">✅ Novos centros serão criados como ativos.</p>
+          <p style="font-size:12px;color:#64748b;margin:4px 0;">✅ Novos centros serão criados como ativos em lote.</p>
         </div>`,
       footer: `
         <button class="drawer-btn-cancelar" id="btn-cancelar-import-cc">Cancelar</button>
         <button class="drawer-btn-salvar"   id="btn-confirmar-import-cc">✅ Confirmar Importação</button>`,
     });
 
+    const BATCH = 100;
     const executar = async () => {
       let criados = 0, atualizadosCount = 0, erros = 0;
 
-      for (const linha of linhasDados) {
+      // Inserir novos em lotes de 100
+      for (let i = 0; i < novosReg.length; i += BATCH) {
+        const lote = novosReg.slice(i, i + BATCH).map(r => ({
+          codigo: r.codigo, nome: r.nome, grupo: r.grupo, ativo: true,
+        }));
         try {
-          const codigo = idxCodigo >= 0 ? linha[idxCodigo]?.trim().toUpperCase() : '';
-          const nome   = linha[idxNome]?.trim();
-          const grupo  = idxGrupo >= 0 ? (linha[idxGrupo]?.trim() || null) : null;
-          if (!nome) continue;
+          const { error } = await _sb.from(TABLES.centrosCusto).insert(lote);
+          if (error) { erros += lote.length; console.warn('[CC import]', error.message); }
+          else { criados += lote.length; }
+        } catch(e) { erros += lote.length; }
+      }
 
-          const payload = { nome, codigo, grupo, ativo: true };
-          const existente = codigo ? mapCodigo[codigo] : null;
-
-          if (existente) {
-            await Storage.update(TABLES.centrosCusto, existente.id, payload);
-            atualizadosCount++;
-          } else {
-            await Storage.create(TABLES.centrosCusto, payload);
-            criados++;
-          }
+      // Atualizar existentes individualmente
+      for (const r of atualizReg) {
+        try {
+          const cc = mapCodigo[r.codigo];
+          await Storage.update(TABLES.centrosCusto, cc.id, { nome: r.nome, grupo: r.grupo, codigo: r.codigo, ativo: true });
+          atualizadosCount++;
         } catch(e) { erros++; }
       }
 
