@@ -116,14 +116,15 @@ Pages.Configuracoes = {
               <tr>
                 <th>Código</th>
                 <th>Nome</th>
+                <th>Grupo</th>
                 <th style="text-align:center;">Status</th>
                 <th style="text-align:center;">Ações</th>
               </tr>
             </thead>
             <tbody>
               ${centros.length
-                ? centros.map(cc => this._linhaCC(cc)).join('')
-                : `<tr><td colspan="4" style="text-align:center;padding:32px;color:#A0AEC0;font-size:13px;font-family:'Manrope',sans-serif;">Nenhum centro de custo cadastrado.</td></tr>`}
+                ? this._renderLinhasCC(centros)
+                : `<tr><td colspan="5" style="text-align:center;padding:32px;color:#A0AEC0;font-size:13px;font-family:'Manrope',sans-serif;">Nenhum centro de custo cadastrado.</td></tr>`}
             </tbody>
           </table>
         </div>`;
@@ -143,12 +144,12 @@ Pages.Configuracoes = {
 
       document.getElementById('btn-template-cc')?.addEventListener('click', () => {
         const template =
-          'codigo,nome\n' +
-          'ADM,Administrativo\n' +
-          'COM,Comercial\n' +
-          'FIN,Financeiro\n' +
-          'TI,Tecnologia\n' +
-          'OPR,Operacional';
+          'codigo,nome,grupo\n' +
+          'ADM,Administrativo,Gestão\n' +
+          'COM,Comercial,Vendas\n' +
+          'FIN,Financeiro,Gestão\n' +
+          'TI,Tecnologia,Operacional\n' +
+          'OPR,Operacional,Operacional';
         const blob = new Blob(['﻿' + template], { type: 'text/csv;charset=utf-8' });
         const url  = URL.createObjectURL(blob);
         const a    = document.createElement('a');
@@ -169,6 +170,35 @@ Pages.Configuracoes = {
     }
   },
 
+  _renderLinhasCC(centros) {
+    // Agrupar por grupo, ordenando grupos sem nome por último
+    const grupos = {};
+    centros.forEach(cc => {
+      const g = cc.grupo || '— Sem grupo —';
+      if (!grupos[g]) grupos[g] = [];
+      grupos[g].push(cc);
+    });
+
+    const keys = Object.keys(grupos).sort((a, b) => {
+      if (a === '— Sem grupo —') return 1;
+      if (b === '— Sem grupo —') return -1;
+      return a.localeCompare(b, 'pt-BR');
+    });
+
+    return keys.map(grupo => {
+      const linhas = grupos[grupo].map(cc => this._linhaCC(cc)).join('');
+      return `
+        <tr>
+          <td colspan="5" style="background:#f8fafc;padding:6px 12px;font-size:11px;
+              font-weight:700;color:hsl(142,55%,25%);text-transform:uppercase;
+              letter-spacing:.06em;border-top:2px solid #e2e8f0;">
+            📁 ${Utils.escapeHtml(grupo)}
+          </td>
+        </tr>
+        ${linhas}`;
+    }).join('');
+  },
+
   _linhaCC(cc) {
     const ativo = cc.ativo !== false;
     return `
@@ -177,6 +207,7 @@ Pages.Configuracoes = {
           <span class="cfg-codigo-badge">${Utils.escapeHtml(cc.codigo || cc.numero || '—')}</span>
         </td>
         <td style="font-weight:600;">${Utils.escapeHtml(cc.nome || '—')}</td>
+        <td style="color:#64748b;font-size:13px;">${Utils.escapeHtml(cc.grupo || '—')}</td>
         <td style="text-align:center;">${Components.badge(ativo ? 'Ativo' : 'Inativo')}</td>
         <td style="text-align:center;">
           <div style="display:flex;justify-content:center;gap:4px;">
@@ -191,10 +222,13 @@ Pages.Configuracoes = {
       </tr>`;
   },
 
-  abrirDialogCC(id = null) {
+  async abrirDialogCC(id = null) {
+    const todos = await Storage.list(TABLES.centrosCusto).catch(() => []);
+    const grupos = [...new Set((todos || []).map(c => c.grupo).filter(Boolean))];
+
     Components.Modal.show({
       title:   id ? 'Editar Centro de Custo' : 'Novo Centro de Custo',
-      content: this._formCC(),
+      content: this._formCC(grupos),
       size:    'sm',
       footer: `
         <button class="drawer-btn-cancelar" id="btn-cancelar-cc">Cancelar</button>
@@ -204,8 +238,9 @@ Pages.Configuracoes = {
     if (id) {
       Storage.get(TABLES.centrosCusto, id).then(cc => {
         if (!cc) return;
-        document.getElementById('cc-codigo').value = cc.codigo || '';
-        document.getElementById('cc-nome').value   = cc.nome   || '';
+        document.getElementById('cc-codigo').value  = cc.codigo || '';
+        document.getElementById('cc-nome').value    = cc.nome   || '';
+        document.getElementById('cc-grupo').value   = cc.grupo  || '';
         document.getElementById('cc-ativo').checked = !!cc.ativo;
       }).catch(() => {});
     }
@@ -216,7 +251,10 @@ Pages.Configuracoes = {
       ?.addEventListener('click', () => this.salvarCC(id));
   },
 
-  _formCC() {
+  _formCC(grupos = []) {
+    const optsGrupo = [...new Set(grupos.filter(Boolean))].sort().map(g =>
+      `<option value="${Utils.escapeHtml(g)}">${Utils.escapeHtml(g)}</option>`
+    ).join('');
     return `
       <div class="drawer-form-row">
         <div class="drawer-field">
@@ -229,6 +267,14 @@ Pages.Configuracoes = {
         </div>
       </div>
       <div class="drawer-field">
+        <label class="drawer-label">Grupo</label>
+        <input type="text" id="cc-grupo" class="drawer-input" placeholder="Ex: Administrativo, Produção..."
+          list="cc-grupos-list" autocomplete="off">
+        <datalist id="cc-grupos-list">
+          ${optsGrupo}
+        </datalist>
+      </div>
+      <div class="drawer-field">
         <label class="drawer-check-row">
           <input type="checkbox" id="cc-ativo" checked>
           <span class="drawer-check-label">Centro de custo ativo</span>
@@ -239,6 +285,7 @@ Pages.Configuracoes = {
   async salvarCC(id = null) {
     const codigo = document.getElementById('cc-codigo')?.value.trim();
     const nome   = document.getElementById('cc-nome')?.value.trim();
+    const grupo  = document.getElementById('cc-grupo')?.value.trim() || null;
     const ativo  = document.getElementById('cc-ativo')?.checked ?? true;
 
     if (!codigo) { Components.Toast.warning('Informe o código.'); return; }
@@ -246,10 +293,10 @@ Pages.Configuracoes = {
 
     try {
       if (id) {
-        await Storage.update(TABLES.centrosCusto, id, { codigo, nome, ativo });
+        await Storage.update(TABLES.centrosCusto, id, { codigo, nome, grupo, ativo });
         Components.Toast.success('Centro de custo atualizado!');
       } else {
-        await Storage.create(TABLES.centrosCusto, { codigo, nome, ativo: true });
+        await Storage.create(TABLES.centrosCusto, { codigo, nome, grupo, ativo: true });
         Components.Toast.success('Centro de custo criado!');
       }
       Components.Modal.hide();
@@ -303,6 +350,7 @@ Pages.Configuracoes = {
 
     const idxCodigo = header.indexOf('codigo');
     const idxNome   = header.indexOf('nome');
+    const idxGrupo  = header.indexOf('grupo');
 
     if (idxNome === -1) {
       Components.Toast.error('Coluna "nome" não encontrada no CSV.');
@@ -357,9 +405,10 @@ Pages.Configuracoes = {
         try {
           const codigo = idxCodigo >= 0 ? linha[idxCodigo]?.trim().toUpperCase() : '';
           const nome   = linha[idxNome]?.trim();
+          const grupo  = idxGrupo >= 0 ? (linha[idxGrupo]?.trim() || null) : null;
           if (!nome) continue;
 
-          const payload = { nome, codigo, ativo: true };
+          const payload = { nome, codigo, grupo, ativo: true };
           const existente = codigo ? mapCodigo[codigo] : null;
 
           if (existente) {

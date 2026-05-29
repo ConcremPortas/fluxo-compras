@@ -668,8 +668,12 @@ Pages.NovaRequisicao = {
 
     this._csReqSetor = CustomSelect.criar(
       document.getElementById('cs-req-setor'),
-      this._setores.map(c => ({ value: c.nome, label: c.nome })),
-      { placeholder: '— Selecione o setor —', limpar: false, rodape: false, value: '' }
+      this._setores.map(c => ({
+        value:    c.nome,
+        label:    c.nome,
+        sublabel: c.grupo || null,
+      })),
+      { placeholder: '— Selecione o setor —', busca: true, limpar: false, rodape: false, value: '' }
     );
     this._csReqPagamento = CustomSelect.criar(
       document.getElementById('cs-req-pagamento'),
@@ -1742,8 +1746,12 @@ Pages.EditarRequisicao = {
     }
     this._csReqSetor = CustomSelect.criar(
       document.getElementById('cs-req-setor'),
-      todosSetores.map(c => ({ value: c.nome, label: c.nome })),
-      { placeholder: '— Selecione o setor —', limpar: false, rodape: false, value: setorAtual || '' }
+      todosSetores.map(c => ({
+        value:    c.nome,
+        label:    c.nome,
+        sublabel: c.grupo || null,
+      })),
+      { placeholder: '— Selecione o setor —', busca: true, limpar: false, rodape: false, value: setorAtual || '' }
     );
     this._csReqPagamento = CustomSelect.criar(
       document.getElementById('cs-req-pagamento'),
