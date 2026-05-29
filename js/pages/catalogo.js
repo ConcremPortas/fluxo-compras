@@ -62,6 +62,10 @@ Pages.Catalogo = {
       <!-- Abas de navegação -->
       <div id="cat-abas-nav" style="display:flex;border-bottom:2px solid #E2E8F0;margin-bottom:16px;gap:0;">
         <button class="cat-aba-nav-btn active" data-aba="itens">📦 Itens</button>
+        <button class="cat-aba-nav-btn" data-aba="sugestoes">
+          💡 Sugestões
+          <span id="cat-sugestoes-count" class="cat-alertas-count-badge" style="display:none;">0</span>
+        </button>
         <button class="cat-aba-nav-btn" data-aba="alertas">
           ⚠️ Alertas de Custo
           <span id="cat-alertas-count" class="cat-alertas-count-badge" style="display:none;">0</span>
@@ -97,7 +101,10 @@ Pages.Catalogo = {
       <!-- Tabela -->
       <div id="tabela-catalogo"></div>
       </div>
-      ${canEdit ? '<div id="cat-aba-alertas" style="display:none;padding-top:4px;"></div>' : ''}`;
+      ${canEdit ? `
+        <div id="cat-aba-sugestoes" style="display:none;padding-top:4px;"></div>
+        <div id="cat-aba-alertas"   style="display:none;padding-top:4px;"></div>
+      ` : ''}`;
 
     document.getElementById('search-catalogo')
       ?.addEventListener('input',  () => this._filtrar());
@@ -131,21 +138,21 @@ Pages.Catalogo = {
       URL.revokeObjectURL(url);
     });
 
-    // Bind abas itens ↔ alertas
+    // Bind abas itens ↔ sugestões ↔ alertas
     document.querySelectorAll('.cat-aba-nav-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         document.querySelectorAll('.cat-aba-nav-btn').forEach(b => b.classList.toggle('active', b === btn));
         const aba = btn.dataset.aba;
-        const elItens   = document.getElementById('cat-aba-itens');
-        const elAlertas = document.getElementById('cat-aba-alertas');
-        if (elItens)   elItens.style.display   = aba === 'itens'   ? '' : 'none';
-        if (elAlertas) elAlertas.style.display  = aba === 'alertas' ? '' : 'none';
-        if (aba === 'alertas') this._renderAbaAlertas();
+        document.getElementById('cat-aba-itens')?.style.setProperty('display', aba === 'itens' ? '' : 'none');
+        document.getElementById('cat-aba-sugestoes')?.style.setProperty('display', aba === 'sugestoes' ? '' : 'none');
+        document.getElementById('cat-aba-alertas')?.style.setProperty('display', aba === 'alertas' ? '' : 'none');
+        if (aba === 'sugestoes') this._renderAbaSugestoes();
+        if (aba === 'alertas')   this._renderAbaAlertas();
       });
     });
 
     await this._carregar();
-    if (canEdit) this._renderAbaAlertas();
+    if (canEdit) { this._renderAbaAlertas(); this._renderAbaSugestoes(); }
   },
 
   /* ----------------------------------------------------------
@@ -177,9 +184,20 @@ Pages.Catalogo = {
       </div>`;
 
     try {
-      this._dados = await Storage.list(TABLES.catalogoItens, {
+      const todos = await Storage.list(TABLES.catalogoItens, {
         order: { column: 'descricao', ascending: true },
       }) || [];
+
+      // Separar sugestões dos itens normais
+      this._dados      = todos.filter(i => i.status !== 'sugestao');
+      this._sugestoes  = todos.filter(i => i.status === 'sugestao');
+
+      // Atualizar badge de sugestões
+      const badgeSug = document.getElementById('cat-sugestoes-count');
+      if (badgeSug) {
+        badgeSug.textContent   = this._sugestoes.length;
+        badgeSug.style.display = this._sugestoes.length > 0 ? '' : 'none';
+      }
 
       // Extrair categorias únicas dos itens
       this._categorias = [...new Set(
@@ -715,6 +733,79 @@ Pages.Catalogo = {
         }
       },
     });
+  },
+
+  /* ----------------------------------------------------------
+     PAINEL DE SUGESTÕES DE NOVOS ITENS
+  ---------------------------------------------------------- */
+  async _renderAbaSugestoes() {
+    const painel = document.getElementById('cat-aba-sugestoes');
+    if (!painel) return;
+
+    const sugestoes = this._sugestoes || [];
+
+    if (!sugestoes.length) {
+      painel.innerHTML = `
+        <div style="text-align:center;padding:48px 20px;">
+          <div style="font-size:36px;margin-bottom:12px;">💡</div>
+          <div style="font-size:15px;font-weight:700;color:#2D3748;margin-bottom:6px;">Nenhuma sugestão pendente</div>
+          <div style="font-size:13px;color:#94a3b8;">Quando um usuário solicitar um item não cadastrado, ele aparecerá aqui.</div>
+        </div>`;
+      return;
+    }
+
+    painel.innerHTML = `
+      <div style="display:flex;flex-direction:column;gap:12px;">
+        ${sugestoes.map(s => `
+          <div style="background:#fff;border:1.5px solid #e2e8f0;border-radius:12px;padding:16px 20px;display:flex;align-items:flex-start;gap:16px;box-shadow:0 1px 4px rgba(0,0,0,.04);">
+            <div style="width:40px;height:40px;background:hsla(142,93%,8%,.08);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;">💡</div>
+            <div style="flex:1;min-width:0;">
+              <div style="font-size:15px;font-weight:700;color:#1a202c;margin-bottom:4px;">${Utils.escapeHtml(s.descricao)}</div>
+              <div style="display:flex;flex-wrap:wrap;gap:8px;font-size:12px;color:#718096;margin-bottom:8px;">
+                <span>👤 <strong>${Utils.escapeHtml(s.solicitante_nome || '—')}</strong></span>
+                ${s.requisicao_numero ? `<span>📋 Req. ${Utils.escapeHtml(s.requisicao_numero)}</span>` : ''}
+                ${s.unidade ? `<span>📦 ${Utils.escapeHtml(s.unidade)}</span>` : ''}
+                ${s.preco_ref ? `<span>💰 ${Utils.formatCurrency(s.preco_ref)}</span>` : ''}
+                <span>📅 ${s.created_at ? new Date(s.created_at).toLocaleDateString('pt-BR') : '—'}</span>
+              </div>
+              ${s.observacoes ? `<div style="font-size:12px;color:#94a3b8;font-style:italic;">${Utils.escapeHtml(s.observacoes)}</div>` : ''}
+            </div>
+            <div style="display:flex;gap:8px;flex-shrink:0;">
+              <button class="btn btn-primary" style="font-size:12px;padding:6px 14px;"
+                data-sug-id="${s.id}" data-sug-acao="aprovar">✅ Aprovar</button>
+              <button class="btn btn-secondary" style="font-size:12px;padding:6px 14px;color:#ef4444;border-color:#ef4444;"
+                data-sug-id="${s.id}" data-sug-acao="rejeitar">❌ Rejeitar</button>
+            </div>
+          </div>`).join('')}
+      </div>`;
+
+    painel.querySelectorAll('[data-sug-acao]').forEach(btn => {
+      btn.addEventListener('click', () => this._processarSugestao(btn.dataset.sugId, btn.dataset.sugAcao));
+    });
+  },
+
+  async _processarSugestao(id, acao) {
+    try {
+      if (acao === 'aprovar') {
+        await Storage.update(TABLES.catalogoItens, id, {
+          status: 'ativo',
+          ativo:  true,
+          updated_at: new Date().toISOString(),
+        });
+        Components.Toast.success('Item aprovado e adicionado ao catálogo!');
+      } else {
+        await Storage.update(TABLES.catalogoItens, id, {
+          status: 'rejeitado',
+          ativo:  false,
+          updated_at: new Date().toISOString(),
+        });
+        Components.Toast.info('Sugestão rejeitada.');
+      }
+      await this._carregar();
+      this._renderAbaSugestoes();
+    } catch (e) {
+      Components.Toast.error('Erro ao processar sugestão: ' + e.message);
+    }
   },
 
   /* ----------------------------------------------------------

@@ -1101,6 +1101,11 @@ Pages.NovaRequisicao = {
         }
       }
 
+      // Verificar itens sem correspondência no catálogo → criar sugestões
+      if (nova?.id && this._catalogo) {
+        await this._sugerirNovosItens(nova, itens);
+      }
+
       clearTimeout(timeoutId);
 
       Components.Toast.success(`Requisição ${nova.numero} criada com sucesso!`);
@@ -1112,6 +1117,52 @@ Pages.NovaRequisicao = {
     } finally {
       clearTimeout(timeoutId);
       _resetBtn();
+    }
+  },
+
+  async _sugerirNovosItens(requisicao, itens) {
+    const user = App.currentUser;
+    const catalogo = this._catalogo || [];
+
+    for (const item of itens) {
+      if (!item.descricao || !item.descricao.trim()) continue;
+
+      const desc = item.descricao.toLowerCase().trim();
+      const jaExiste = catalogo.some(c =>
+        c.status !== 'sugestao' &&
+        c.descricao && c.descricao.toLowerCase().trim() === desc
+      );
+
+      if (!jaExiste) {
+        try {
+          await Storage.create(TABLES.catalogoItens, {
+            codigo:            null,
+            descricao:         item.descricao.trim(),
+            unidade:           item.unidade || 'UN',
+            categoria:         null,
+            preco_ref:         item.valor_unitario || 0,
+            observacoes:       `Sugerido via requisição ${requisicao.numero}`,
+            ativo:             false,
+            status:            'sugestao',
+            solicitante_nome:  user?.nome || '',
+            solicitante_id:    user?.id   || null,
+            requisicao_numero: requisicao.numero,
+            created_at:        new Date().toISOString(),
+            updated_at:        new Date().toISOString(),
+          });
+        } catch (e) {
+          console.warn('[Sugestão catálogo]', e.message);
+        }
+      }
+    }
+
+    // Notificar supervisores/admin sobre novas sugestões
+    if (typeof Notificacoes !== 'undefined') {
+      Notificacoes.notificarNovo('info',
+        `${user?.nome || 'Usuário'} solicitou itens não cadastrados no catálogo`,
+        `Requisição ${requisicao.numero} contém itens para avaliação`,
+        'catalogo'
+      );
     }
   },
 };
