@@ -5,7 +5,7 @@
 const _sb = window.supabase.createClient(
   window.__SUPABASE_URL__      || CONFIG.SUPABASE_URL,
   window.__SUPABASE_ANON_KEY__ || CONFIG.SUPABASE_KEY,
-  { auth: { storage: window.localStorage, detectSessionInUrl: false } }
+  { auth: { storage: window.sessionStorage, detectSessionInUrl: false } }
 );
 
 window._sb = _sb;
