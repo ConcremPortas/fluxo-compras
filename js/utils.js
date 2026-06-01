@@ -339,6 +339,26 @@ const Utils = {
     return div.innerHTML;
   },
 
+  /**
+   * Converte URLs no texto em links clicáveis (abre em nova aba).
+   * O texto não-URL é escapado para prevenir XSS.
+   */
+  linkificar(text) {
+    if (!text) return '';
+    const URL_REGEX = /(https?:\/\/[^\s<>"']+)/g;
+    return String(text)
+      .split(URL_REGEX)
+      .map((part, i) => {
+        if (i % 2 === 1) {
+          const escaped = this.escapeHtml(part);
+          return `<a href="${escaped}" target="_blank" rel="noopener noreferrer"
+            style="color:hsl(142,70%,28%);text-decoration:underline;word-break:break-all;">${escaped}</a>`;
+        }
+        return this.escapeHtml(part);
+      })
+      .join('');
+  },
+
   /* ----------------------------------------------------------
      DATEPICKER HELPERS
   ---------------------------------------------------------- */

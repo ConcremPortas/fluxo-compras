@@ -269,7 +269,7 @@ Pages.Aprovacoes = {
 
           ${req.observacoes ? `
             <div class="aprov-itens-preview" style="margin-top:6px;">
-              <strong>Observações:</strong> ${Utils.escapeHtml(req.observacoes)}
+              <strong>Observações:</strong> ${Utils.linkificar(req.observacoes)}
             </div>` : ''}
         </div>
 
