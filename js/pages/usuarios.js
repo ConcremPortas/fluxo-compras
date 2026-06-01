@@ -246,7 +246,8 @@ Pages.Usuarios = {
         if (!u) return;
         document.getElementById('usr-nome').value    = u.nome  || '';
         document.getElementById('usr-email').value   = u.email || '';
-        document.getElementById('usr-ativo').checked = !!u.ativo;
+        document.getElementById('usr-ativo').checked       = !!u.ativo;
+        document.getElementById('usr-trocar-senha').checked = !!u.trocar_senha;
 
         this._csUsrRole?.setValue(u.role || 'solicitante');
 
@@ -383,6 +384,12 @@ Pages.Usuarios = {
           <input type="checkbox" id="usr-ativo" checked>
           <span class="drawer-check-label">Usuário ativo</span>
         </label>
+      </div>
+      <div class="drawer-field">
+        <label class="drawer-check-row">
+          <input type="checkbox" id="usr-trocar-senha">
+          <span class="drawer-check-label">Exigir troca de senha no próximo login</span>
+        </label>
       </div>`;
   },
 
@@ -393,6 +400,7 @@ Pages.Usuarios = {
     const nivel_alcada   = this._csUsrNivel?.getValue() || null;
     const lider_do_grupo = Array.from(document.querySelectorAll('.usr-lider-cb:checked')).map(cb => cb.value);
     const ativo          = document.getElementById('usr-ativo')?.checked ?? true;
+    const trocar_senha   = document.getElementById('usr-trocar-senha')?.checked ?? false;
     const senha          = (document.getElementById('usr-senha')?.value || '').trim();
 
     if (!nome)  { Components.Toast.warning('Informe o nome.'); return; }
@@ -412,7 +420,7 @@ Pages.Usuarios = {
 
       if (id) {
         // Atualizar usuário existente (sem senha na tabela)
-        await Storage.update(TABLES.usuarios, id, { nome, email, role, ativo });
+        await Storage.update(TABLES.usuarios, id, { nome, email, role, ativo, trocar_senha });
 
         // Alterar senha via Edge Function (somente se informada)
         if (senha) {
@@ -433,7 +441,7 @@ Pages.Usuarios = {
       } else {
         // Criar novo usuário via Edge Function (cria no Auth + tabela)
         const { data: result, error } = await _sb.functions.invoke('criar-usuario', {
-          body: { nome, email, role, senha }
+          body: { nome, email, role, senha, trocar_senha }
         });
         const msgErro = error?.message || result?.error;
         if (msgErro) throw new Error(msgErro);
