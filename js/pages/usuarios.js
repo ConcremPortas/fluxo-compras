@@ -117,6 +117,11 @@ Pages.Usuarios = {
           this.toggleAtivacaoUsuario(btn.dataset.id, btn.dataset.ativo === 'true')
         )
       );
+      container.querySelectorAll('.btn-excluir-usr').forEach(btn =>
+        btn.addEventListener('click', () =>
+          this.excluirUsuario(btn.dataset.id, btn.dataset.nome)
+        )
+      );
     } catch (e) {
       container.innerHTML = `<p style="padding:24px;color:#718096;font-family:'Manrope',sans-serif;">Erro ao carregar usuários: ${Utils.escapeHtml(e.message)}</p>`;
     }
@@ -191,6 +196,9 @@ Pages.Usuarios = {
               title="${ativo ? 'Inativar' : 'Ativar'}">
               ${ativo ? '🔒' : '🔓'}
             </button>
+            <button class="cfg-btn-acao danger btn-excluir-usr"
+              data-id="${u.id}" data-nome="${Utils.escapeHtml(u.nome)}"
+              title="Excluir usuário">🗑️</button>
           </div>
         </td>
       </tr>`;
@@ -532,6 +540,33 @@ Pages.Usuarios = {
           await this._carregar();
         } catch (e) {
           Components.Toast.error('Erro: ' + e.message);
+        }
+      },
+    });
+  },
+
+  excluirUsuario(id, nome) {
+    if (String(id) === String(App.currentUser?.id)) {
+      Components.Toast.error('Você não pode excluir sua própria conta.');
+      return;
+    }
+    Components.Modal.confirm({
+      title:        'Excluir usuário',
+      message:      `Deseja realmente excluir o usuário "${nome}"? Esta ação não pode ser desfeita.`,
+      danger:       true,
+      icon:         '🗑️',
+      confirmLabel: 'Excluir',
+      onConfirm: async () => {
+        try {
+          const { data: result, error } = await _sb.functions.invoke('excluir-usuario', {
+            body: { usuario_id: id }
+          });
+          const msgErro = error?.message || result?.error;
+          if (msgErro) throw new Error(msgErro);
+          Components.Toast.success(`Usuário "${nome}" excluído com sucesso.`);
+          await this._carregar();
+        } catch (e) {
+          Components.Toast.error('Erro ao excluir: ' + e.message);
         }
       },
     });
