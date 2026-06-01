@@ -122,9 +122,6 @@ if (this.currentUser) {
     // Inicializar banner PWA (fora do fluxo de login)
     this._initPWAInstall();
 
-    // Escutar mudanças de hash
-    window.addEventListener('hashchange', () => this._handleRoute());
-
     // Verificar redirect pós-login
     const redirect = sessionStorage.getItem('fc_redirect_after_login');
     if (redirect && this.currentUser) {
@@ -290,16 +287,22 @@ if (this.currentUser) {
   /* ----------------------------------------------------------
      NAVEGAÇÃO
   ---------------------------------------------------------- */
+  _rotaAtual: '',
+
   navigate(path) {
-    window.location.hash = path;
+    this._rotaAtual = path || '';
+    // Limpar o hash da URL sem recarregar a página
+    if (window.location.hash) {
+      history.replaceState(null, '', window.location.pathname);
+    }
+    this._handleRoute();
   },
 
   /* ----------------------------------------------------------
      ROTEADOR
   ---------------------------------------------------------- */
   _handleRoute() {
-    const hash  = window.location.hash.replace(/^#\/?/, '').trim() || '';
-    const route = hash || 'login';
+    const route = this._rotaAtual || 'login';
 
     if (route === 'trocar-senha') {
       this._mostrarModalTrocarSenha();
@@ -878,7 +881,7 @@ if (this.currentUser) {
       });
     });
 
-    this._atualizarNavAtiva((window.location.hash.replace(/^#\/?/, '') || 'dashboard').split('/')[0]);
+    this._atualizarNavAtiva((this._rotaAtual || 'dashboard').split('/')[0]);
   },
 
   _atualizarNavAtiva(rota) {
