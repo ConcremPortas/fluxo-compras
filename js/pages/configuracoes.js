@@ -374,13 +374,14 @@ Pages.Configuracoes = {
       if (id) {
         const { error } = await _sb.from(TABLES.centrosCusto).update({ codigo, nome, grupo, ativo }).eq('id', id);
         if (error) throw new Error(error.message);
+        Components.Modal.hide();
         Components.Toast.success('Centro de custo atualizado!');
       } else {
         const { error } = await _sb.from(TABLES.centrosCusto).insert({ codigo, nome, grupo, ativo: true });
         if (error) throw new Error(error.message);
+        Components.Modal.hide();
         Components.Toast.success('Centro de custo criado!');
       }
-      Components.Modal.hide();
       await this.carregarAbaCentros();
     } catch (e) {
       console.error('[CC salvar]', e);
