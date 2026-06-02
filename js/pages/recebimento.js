@@ -577,6 +577,21 @@ Pages.Recebimento = {
           status_novo:     'Entrega Atrasada',
         });
 
+        // Criar OC Parcial de registro para entrega não realizada
+        await Storage.create(TABLES.ordens, {
+          numero:               `${oc.numero}-P`,
+          requisicao_id:        oc.requisicao_id || null,
+          fornecedor_id:        oc.fornecedor_id || null,
+          fornecedor_nome:      fornecedor,
+          itens:                itensConferencia.map(i => ({ descricao: i.descricao, quantidade: i.quantidade_esperada, unidade: 'UN', status: 'Não Recebido' })),
+          valor_total:          0,
+          status:               'OC Parcial',
+          oc_origem:            oc.numero,
+          observacoes:          `Entrega não realizada. Fornecedor: ${fornecedor}. ` +
+                                (atrasado ? `Prevista em: ${Utils.formatDate(dataEntrega)} (ATRASADA).` : ''),
+          data_entrega_prevista: dataEntrega || null,
+        }).catch(e => console.warn('[OC Parcial]', e.message));
+
         Components.Modal.hide();
         Components.Toast.warning(`⚠️ Entrega não realizada registrada. Fornecedor: ${fornecedor}.`);
         Notificacoes.notificarNovo('urgente', 'Entrega não realizada',
@@ -609,6 +624,29 @@ Pages.Recebimento = {
         // OC permanece em aberto como Recebimento Parcial
         await Storage.update(TABLES.ordens, oc.id, { status: 'Recebimento Parcial' });
 
+        // Criar OC Parcial para registro de divergências do fornecedor
+        const numeroOCParcial = `${oc.numero}-P`;
+        await Storage.create(TABLES.ordens, {
+          numero:               numeroOCParcial,
+          requisicao_id:        oc.requisicao_id || null,
+          requisicao_numero:    oc.requisicao_numero || null,
+          fornecedor_id:        oc.fornecedor_id || null,
+          fornecedor_nome:      fornecedor,
+          itens:                itensPendentes.map(i => ({
+            descricao:   i.descricao,
+            quantidade:  i.quantidade_esperada,
+            unidade:     'UN',
+            status:      i.recebido,
+          })),
+          valor_total:          0,
+          status:               'OC Parcial',
+          oc_origem:            oc.numero,
+          observacoes:          `OC parcial gerada automaticamente por divergência no recebimento de ${oc.numero}. ` +
+                                `Fornecedor: ${fornecedor}. ${itensPendentes.length} item(ns) com divergência.`,
+          data_entrega_prevista: dataEntrega || null,
+          criado_em_recebimento: dataRec,
+        }).catch(e => console.warn('[OC Parcial]', e.message));
+
         await Storage.create(TABLES.historico, {
           requisicao_id:   oc.requisicao_id || null,
           acao:            'Recebimento Parcial',
@@ -617,6 +655,7 @@ Pages.Recebimento = {
           detalhes:        `Fornecedor: ${fornecedor}. NF: ${numeroNF}. ` +
                            `${itensRecebidos.length} item(ns) prontos para qualidade. ` +
                            `${itensPendentes.length} item(ns) pendentes. ` +
+                           `OC Parcial gerada: ${numeroOCParcial}. ` +
                            (atrasado ? `Entrega prevista: ${Utils.formatDate(dataEntrega)} (ATRASADA). ` : ''),
           status_anterior: 'Aguardando Recebimento',
           status_novo:     'Recebimento Parcial',
