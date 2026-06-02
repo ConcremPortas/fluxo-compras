@@ -292,6 +292,16 @@ Pages.Configuracoes = {
     const todos = await Storage.list(TABLES.centrosCusto).catch(() => []);
     const grupos = [...new Set((todos || []).map(c => c.grupo).filter(Boolean))];
 
+    // Gerar código automático para novo CC
+    let codigoAuto = '';
+    if (!id) {
+      const codigos = (todos || [])
+        .map(c => parseInt((c.codigo || '').replace(/\D/g, ''), 10))
+        .filter(n => !isNaN(n));
+      const maximo = codigos.length > 0 ? Math.max(...codigos) : 0;
+      codigoAuto = String(maximo + 1).padStart(6, '0');
+    }
+
     Components.Modal.show({
       title:   id ? 'Editar Centro de Custo' : 'Novo Centro de Custo',
       content: this._formCC(grupos),
@@ -309,6 +319,10 @@ Pages.Configuracoes = {
         document.getElementById('cc-grupo').value   = cc.grupo  || '';
         document.getElementById('cc-ativo').checked = !!cc.ativo;
       }).catch(() => {});
+    } else {
+      // Preencher código automático
+      const inputCodigo = document.getElementById('cc-codigo');
+      if (inputCodigo) inputCodigo.value = codigoAuto;
     }
 
     document.getElementById('btn-cancelar-cc')
@@ -354,8 +368,7 @@ Pages.Configuracoes = {
     const grupo  = document.getElementById('cc-grupo')?.value.trim() || null;
     const ativo  = document.getElementById('cc-ativo')?.checked ?? true;
 
-    if (!codigo) { Components.Toast.warning('Informe o código.'); return; }
-    if (!nome)   { Components.Toast.warning('Informe o nome.'); return; }
+    if (!nome) { Components.Toast.warning('Informe o nome.'); return; }
 
     try {
       if (id) {
