@@ -567,11 +567,10 @@ if (this.currentUser) {
 
       const totalAprovacoes = (requisicoes || []).filter(r => {
         if (!STATUS_APROVACAO.includes(r.status)) return false;
-        // Filtrar por nivel_alcada se definido
+        // Filtrar por nivel_alcada se definido — excluir reqs acima do nível
         if (idxNivelUser >= 0) {
           const idxReq = HIERARQUIA_ALC.findIndex(n => n.toLowerCase() === (r.alcada_aprovacao || '').toLowerCase());
           if (idxReq >= 0 && idxReq > idxNivelUser) return false;
-          if (user.role === 'admin') return true;
         }
         return FluxoAprovacao.podeAprovar(r.alcada_aprovacao, r.status, user.role, nivelUser);
       }).length;
