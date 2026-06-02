@@ -54,46 +54,56 @@ var FluxoAprovacao = (function() {
   function podeAprovar(alcada, statusAtual, roleUsuario, nivelAlcada) {
     const HIER = ['supervisor', 'gerente', 'diretor'];
 
-    // Se tem nivel_alcada: checar se a alcada da req está dentro do nível do usuário
+    // Role efetivo para verificação: nivel_alcada restringe admin; sem nivel → role livre
+    const roleEfetivo = nivelAlcada ? nivelAlcada.toLowerCase() : roleUsuario;
+    const idxEfetivo  = HIER.indexOf(roleEfetivo);
+
     if (nivelAlcada) {
-      const idxUser = HIER.indexOf(nivelAlcada.toLowerCase());
-      const idxReq  = HIER.indexOf((alcada || '').toLowerCase());
-      // Req acima do nível do usuário → sem acesso
-      if (idxUser >= 0 && idxReq >= 0 && idxReq > idxUser) return false;
-      // Dentro do nível: admin pode sempre
-      if (roleUsuario === 'admin') return true;
+      // Com nivel_alcada: checar se a alcada da requisição está dentro do nível do usuário
+      const idxReq = HIER.indexOf((alcada || '').toLowerCase());
+      if (idxEfetivo >= 0 && idxReq >= 0 && idxReq > idxEfetivo) return false;
+      // Admin com nivel_alcada é tratado como aquele nível — não aprova além disso
     } else {
-      // Sem nivel_alcada: admin pode tudo, supervisor nada
+      // Sem nivel_alcada: admin pode tudo, supervisor não aprova nada por padrão
       if (roleUsuario === 'admin') return true;
       if (roleUsuario === 'supervisor') return false;
     }
 
     const cfg = _config[alcada];
     if (!cfg) {
-      // Fallback sem config: gerente aprova etapas 1/2; diretor aprova Diretoria
+      // Fallback sem config
       if (statusAtual === 'Aguardando Avaliacao de Compras' ||
           statusAtual === 'Aguardando Aprovacao Etapa 1' ||
           statusAtual === 'Aguardando Aprovacao Etapa 2') {
-        return ['gerente', 'supervisor'].includes(roleUsuario);
+        return ['gerente', 'supervisor'].includes(roleEfetivo);
       }
       if (statusAtual === 'Aguardando Aprovacao da Diretoria') {
-        return roleUsuario === 'diretor';
+        return ['diretor', 'gerente'].includes(roleEfetivo);
       }
       return false;
     }
     if (!cfg.usa_dupla_aprovacao) {
       return statusAtual === 'Aguardando Aprovacao da Diretoria' &&
-             ['diretor', 'gerente'].includes(roleUsuario);
+             ['diretor', 'gerente'].includes(roleEfetivo);
     }
+
+    const idxEtapa1 = HIER.indexOf((cfg.etapa1_role || '').toLowerCase());
+    const idxEtapa2 = HIER.indexOf((cfg.etapa2_role || '').toLowerCase());
+
     if (statusAtual === 'Aguardando Aprovacao Etapa 1' ||
         statusAtual === 'Aguardando Avaliacao de Compras') {
-      return roleUsuario === cfg.etapa1_role;
+      // Pode aprovar se o nível efetivo for >= o nível exigido na etapa
+      return idxEfetivo >= 0 && idxEtapa1 >= 0
+        ? idxEfetivo >= idxEtapa1
+        : roleEfetivo === (cfg.etapa1_role || '').toLowerCase();
     }
     if (statusAtual === 'Aguardando Aprovacao Etapa 2') {
-      return roleUsuario === cfg.etapa2_role;
+      return idxEfetivo >= 0 && idxEtapa2 >= 0
+        ? idxEfetivo >= idxEtapa2
+        : roleEfetivo === (cfg.etapa2_role || '').toLowerCase();
     }
     if (statusAtual === 'Aguardando Aprovacao da Diretoria') {
-      return ['diretor', 'gerente'].includes(roleUsuario);
+      return ['diretor', 'gerente'].includes(roleEfetivo);
     }
     return false;
   }
