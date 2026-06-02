@@ -670,10 +670,9 @@ Pages.NovaRequisicao = {
     const nomeCount = {};
     this._setores.forEach(c => { nomeCount[c.nome] = (nomeCount[c.nome] || 0) + 1; });
     const opcoesSetor = this._setores.map(c => ({
-      value:    c.nome,
-      label:    nomeCount[c.nome] > 1 ? `${c.nome} (${c.grupo || 'Sem grupo'})` : c.nome,
-      sublabel: nomeCount[c.nome] > 1 ? null : (c.grupo || null),
-      group:    c.grupo || 'Sem grupo',
+      value: c.nome,
+      label: nomeCount[c.nome] > 1 ? `${c.nome} (${c.grupo || 'Sem grupo'})` : c.nome,
+      group: c.grupo || 'Sem grupo',
     }));
     this._csReqSetor = CustomSelect.criar(
       document.getElementById('cs-req-setor'),
