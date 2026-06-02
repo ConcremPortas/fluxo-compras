@@ -340,6 +340,22 @@ const Utils = {
   },
 
   /**
+   * Abrevia categoria no formato "SETOR - GRUPO" → "SETO.GRP-N"
+   * Ex: "ACABAMENTO - FÁBRICA 02" → "ACAB.FAB-2"
+   */
+  abreviarCategoria(cat) {
+    if (!cat) return '';
+    const partes = cat.split(' - ');
+    if (partes.length < 2) {
+      return cat.length > 14 ? cat.substring(0, 12) + '…' : cat;
+    }
+    const p1  = partes[0].replace(/[^A-ZÀ-Ü]/gi, '').substring(0, 4).toUpperCase();
+    const num = partes[1].match(/\d+/)?.[0]?.replace(/^0+/, '') || '';
+    const p2  = partes[1].replace(/\d+/g, '').replace(/[^A-ZÀ-Ü]/gi, '').substring(0, 3).toUpperCase();
+    return num ? `${p1}.${p2}-${num}` : `${p1}.${p2}`;
+  },
+
+  /**
    * Converte URLs no texto em links clicáveis (abre em nova aba).
    * O texto não-URL é escapado para prevenir XSS.
    */

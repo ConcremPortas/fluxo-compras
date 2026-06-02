@@ -242,8 +242,9 @@ Pages.Catalogo = {
         const cor = this._PILL_CORES[idx % this._PILL_CORES.length];
         return `<button class="cat-pill ${this._categoriaAtiva === c ? 'ativa' : ''}"
                         data-cat="${Utils.escapeHtml(c)}"
+                        title="${Utils.escapeHtml(c)}"
                         style="--pill-cor:${cor}">
-                  ${Utils.escapeHtml(c)}
+                  ${Utils.escapeHtml(Utils.abreviarCategoria(c))}
                   <span class="cat-pill-count">${counts[c] || 0}</span>
                 </button>`;
       }).join('')}`;
@@ -329,8 +330,9 @@ Pages.Catalogo = {
         </td>
         <td>
           <span style="font-size:12px;color:#64748b;background:#F1F5F9;
-            padding:3px 8px;border-radius:5px;">
-            ${Utils.escapeHtml(item.categoria || '—')}
+            padding:3px 8px;border-radius:5px;"
+            title="${Utils.escapeHtml(item.categoria || '')}">
+            ${Utils.escapeHtml(Utils.abreviarCategoria(item.categoria) || '—')}
           </span>
         </td>
         <td style="font-weight:600;color:#475569;text-align:center;">
