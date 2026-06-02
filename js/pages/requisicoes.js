@@ -1133,6 +1133,12 @@ Pages.NovaRequisicao = {
     const user = App.currentUser;
     const catalogo = this._catalogo || [];
 
+    // Montar categoria com grupo quando disponível
+    const setorInfo = (this._setores || []).find(s => s.nome === requisicao.setor);
+    const categoriaComGrupo = setorInfo?.grupo
+      ? `${requisicao.setor} - ${setorInfo.grupo}`
+      : (requisicao.setor || null);
+
     for (const item of itens) {
       if (!item.descricao || !item.descricao.trim()) continue;
 
@@ -1151,7 +1157,7 @@ Pages.NovaRequisicao = {
             codigo:            codigoSug,
             descricao:         item.descricao.trim(),
             unidade:           item.unidade || 'UN',
-            categoria:         requisicao.setor || null,
+            categoria:         categoriaComGrupo,
             preco_ref:         item.valor_unitario || 0,
             observacoes:       `Sugerido via requisição ${requisicao.numero}`,
             ativo:             false,
