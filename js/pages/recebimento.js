@@ -184,15 +184,39 @@ Pages.Recebimento = {
       </div>`).join('');
   },
 
-  abrirDialogRegistro(ocId) {
+  async abrirDialogRegistro(ocId) {
     this.ocAtual   = this.ocsPendentes.find(o => String(o.id) === String(ocId));
     this.arquivoNF = null;
 
     if (!this.ocAtual) { Components.Toast.error('OC não encontrada.'); return; }
 
+    // Carregar recebimentos anteriores para saber quais itens já foram recebidos
+    let statusAnteriorMap = {}; // { descricao: 'Sim' | 'Parcial' | 'Não' }
+    if (this.ocAtual.status === 'Recebimento Parcial') {
+      try {
+        const recsAnteriores = await Storage.list(TABLES.recebimentos, {
+          filters: [{ column: 'ordem_compra_id', op: 'eq', value: ocId }],
+        });
+        // Consolidar status por item (último status registrado)
+        (recsAnteriores || []).forEach(rec => {
+          (rec.itens_conferencia || []).forEach(item => {
+            if (item.descricao) {
+              const anterior = statusAnteriorMap[item.descricao];
+              // "Sim" tem precedência — se já foi totalmente recebido, permanece
+              if (!anterior || anterior !== 'Sim') {
+                statusAnteriorMap[item.descricao] = item.recebido;
+              }
+            }
+          });
+        });
+      } catch (_) {}
+    }
+
+    this._statusAnteriorMap = statusAnteriorMap;
+
     Components.Modal.show({
       title:   `Registrar Recebimento — ${this.ocAtual.numero}`,
-      content: this.htmlDialogRecebimento(this.ocAtual),
+      content: this.htmlDialogRecebimento(this.ocAtual, statusAnteriorMap),
       size:    'xxl',
       footer: `
         <button class="drawer-btn-cancelar" id="btn-cancelar-recebimento">Cancelar</button>
@@ -208,8 +232,13 @@ Pages.Recebimento = {
       ?.addEventListener('click', () => this.confirmarRecebimento(ocId));
   },
 
-  htmlDialogRecebimento(oc) {
-    const itens = Array.isArray(oc.itens) ? oc.itens : [];
+  htmlDialogRecebimento(oc, statusAnteriorMap = {}) {
+    const todosItens = Array.isArray(oc.itens) ? oc.itens : [];
+    // Separar itens já recebidos (travados) dos pendentes (editáveis)
+    const itensRecebidos = todosItens.filter(i => statusAnteriorMap[i.descricao] === 'Sim');
+    const itensPendentes = todosItens.filter(i => statusAnteriorMap[i.descricao] !== 'Sim');
+    const itens = itensPendentes.length > 0 ? itensPendentes : todosItens;
+    const temRecebidosAnteriores = itensRecebidos.length > 0;
 
     return `
       <!-- Nota Fiscal -->
@@ -257,7 +286,11 @@ Pages.Recebimento = {
       <!-- Conferência de Itens -->
       <div class="receb-dialog-section">
         <div class="receb-dialog-section-title">📦 Conferência de Itens</div>
-        ${itens.length > 0 ? `
+        ${temRecebidosAnteriores ? `
+        <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:10px 14px;margin-bottom:12px;font-size:13px;color:#166534;">
+          ✅ <strong>${itensRecebidos.length} item(ns) já recebido(s)</strong> em etapas anteriores — aparecem travados abaixo.
+        </div>` : ''}
+      ${itens.length > 0 ? `
           <table class="receb-conf-table">
             <colgroup>
               <col class="col-item" />
@@ -278,11 +311,12 @@ Pages.Recebimento = {
               </tr>
             </thead>
             <tbody>
-              ${itens.map((item, i) => this._criarLinhaConferencia(item, i)).join('')}
+              ${itensRecebidos.map((item, i) => this._criarLinhaConferenciaTravada(item, i)).join('')}
+              ${itens.map((item, i) => this._criarLinhaConferencia(item, i + itensRecebidos.length, statusAnteriorMap[item.descricao])).join('')}
             </tbody>
           </table>` : `
           <div class="receb-empty" style="padding:20px;">
-            <div class="receb-empty-text">Nenhum item encontrado nesta OC.</div>
+            <div class="receb-empty-text">Nenhum item pendente. Todos os itens já foram recebidos.</div>
           </div>`}
       </div>
 
@@ -294,9 +328,24 @@ Pages.Recebimento = {
       </div>`;
   },
 
-  _criarLinhaConferencia(item, index) {
+  _criarLinhaConferenciaTravada(item, index) {
     const qtd = item.quantidade || 0;
     const un  = Utils.escapeHtml(item.unidade || '');
+    return `
+      <tr style="opacity:0.55;background:#f8fafc;">
+        <td>${Utils.escapeHtml(item.descricao || '—')} <span style="font-size:11px;color:#16a34a;font-weight:600;">✅ já recebido</span></td>
+        <td style="text-align:right;">${qtd} ${un}</td>
+        <td style="text-align:right;color:#64748b;">${qtd} ${un}</td>
+        <td><span style="font-size:13px;color:#16a34a;font-weight:600;">✅ Sim</span></td>
+        <td>—</td>
+        <td>—</td>
+      </tr>`;
+  },
+
+  _criarLinhaConferencia(item, index, statusAnterior) {
+    const qtd = item.quantidade || 0;
+    const un  = Utils.escapeHtml(item.unidade || '');
+    const sel = statusAnterior || 'Sim';
     return `
       <tr>
         <td>${Utils.escapeHtml(item.descricao || '—')}</td>
@@ -307,9 +356,9 @@ Pages.Recebimento = {
         </td>
         <td>
           <select class="receb-conf-select conf-recebido" data-index="${index}">
-            <option value="Sim">✅ Sim</option>
-            <option value="Parcial">⚠️ Parcial</option>
-            <option value="Não">❌ Não</option>
+            <option value="Sim"    ${sel === 'Sim'    ? 'selected' : ''}>✅ Sim</option>
+            <option value="Parcial"${sel === 'Parcial'? 'selected' : ''}>⚠️ Parcial</option>
+            <option value="Não"   ${sel === 'Não'    ? 'selected' : ''}>❌ Não</option>
           </select>
         </td>
         <td>
