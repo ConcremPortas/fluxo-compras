@@ -112,18 +112,20 @@ const Utils = {
   calcAlcada(valor, alcadasConfig = null) {
     const v = Number(valor);
 
-    if (alcadasConfig && Array.isArray(alcadasConfig)) {
+    if (alcadasConfig && Array.isArray(alcadasConfig) && alcadasConfig.length > 0) {
       // Usa configuração dinâmica do banco
       const sorted = [...alcadasConfig].sort((a, b) => a.valor_minimo - b.valor_minimo);
       for (const faixa of sorted) {
-        if (faixa.sem_limite_maximo || v <= faixa.valor_maximo) {
+        const acimaDominimo = v >= (faixa.valor_minimo || 0);
+        const dentroDaFaixa = faixa.sem_limite_maximo || v <= faixa.valor_maximo;
+        if (acimaDominimo && dentroDaFaixa) {
           return faixa.nome;
         }
       }
     }
 
-    // Faixas padrão (fallback)
-    if (v <= 5000)   return 'Supervisor';
+    // Faixas padrão (fallback) — R$0-4.999 Supervisor, R$5.000-100.000 Gerente, acima Diretor
+    if (v < 5000)    return 'Supervisor';
     if (v <= 100000) return 'Gerente';
     return 'Diretor';
   },
