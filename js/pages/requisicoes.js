@@ -501,7 +501,7 @@ Pages.NovaRequisicao = {
           </div>
 
           <!-- Seção 2 · Itens -->
-          <div class="nova-req-section">
+          <div class="nova-req-section" style="position:relative;z-index:1;">
             <div class="nova-req-section-header">
               <span class="nova-req-section-icon">📦</span>
               Itens da Requisição
@@ -546,7 +546,7 @@ Pages.NovaRequisicao = {
           </div>
 
           <!-- Seção 3 · Informações Adicionais -->
-          <div class="nova-req-section">
+          <div class="nova-req-section" style="position:relative;z-index:1;">
             <div class="nova-req-section-header">
               <span class="nova-req-section-icon">ℹ️</span>
               Informações Adicionais
@@ -666,10 +666,14 @@ Pages.NovaRequisicao = {
       this._setores = ['TI', 'RH', 'Financeiro', 'Operações', 'Administrativo', 'Comercial'].map(n => ({ nome: n }));
     }
 
+    // Detectar nomes duplicados para mostrar grupo no label
+    const nomeCount = {};
+    this._setores.forEach(c => { nomeCount[c.nome] = (nomeCount[c.nome] || 0) + 1; });
     const opcoesSetor = this._setores.map(c => ({
-      value: c.nome,
-      label: c.nome,
-      group: c.grupo || 'Sem grupo',
+      value:    c.nome,
+      label:    nomeCount[c.nome] > 1 ? `${c.nome} (${c.grupo || 'Sem grupo'})` : c.nome,
+      sublabel: nomeCount[c.nome] > 1 ? null : (c.grupo || null),
+      group:    c.grupo || 'Sem grupo',
     }));
     this._csReqSetor = CustomSelect.criar(
       document.getElementById('cs-req-setor'),
@@ -1585,7 +1589,7 @@ Pages.EditarRequisicao = {
           </div>
 
           <!-- Seção 2 · Itens -->
-          <div class="nova-req-section">
+          <div class="nova-req-section" style="position:relative;z-index:1;">
             <div class="nova-req-section-header">
               <span class="nova-req-section-icon">📦</span>
               Itens da Requisição
@@ -1626,7 +1630,7 @@ Pages.EditarRequisicao = {
           </div>
 
           <!-- Seção 3 · Informações Adicionais -->
-          <div class="nova-req-section">
+          <div class="nova-req-section" style="position:relative;z-index:1;">
             <div class="nova-req-section-header">
               <span class="nova-req-section-icon">ℹ️</span>
               Informações Adicionais
