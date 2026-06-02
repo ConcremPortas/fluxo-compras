@@ -235,13 +235,23 @@ Pages.Recebimento = {
         <button class="drawer-btn-salvar"   id="btn-confirmar-recebimento">✅ Confirmar Recebimento</button>`,
     });
 
+    this._nfAnteriorUrl = ultimoRecebimento?.nota_fiscal_url || null;
     this.inicializarUpload();
-    const _drEl = document.getElementById('data-recebimento');
-    if (_drEl) _drEl.value = new Date().toISOString().split('T')[0];
     Utils.initDatePicker('data-recebimento');
     document.getElementById('btn-cancelar-recebimento')?.addEventListener('click', () => Components.Modal.hide());
     document.getElementById('btn-confirmar-recebimento')
       ?.addEventListener('click', () => this.confirmarRecebimento(ocId));
+
+    // Botão para reutilizar NF anterior
+    document.getElementById('btn-usar-nf-anterior')?.addEventListener('click', () => {
+      this.arquivoNF = '_reutilizar_anterior_';
+      const placeholder = document.getElementById('upload-placeholder-nf');
+      const preview     = document.getElementById('upload-preview-nf');
+      const fileName    = document.getElementById('nf-file-name');
+      if (placeholder) placeholder.style.display = 'none';
+      if (preview)     preview.style.display = 'flex';
+      if (fileName)    fileName.textContent   = '♻️ NF anterior reutilizada';
+    });
   },
 
   htmlDialogRecebimento(oc, statusAnteriorMap = {}, ultimoRec = null) {
@@ -259,6 +269,9 @@ Pages.Recebimento = {
         NF ${Utils.escapeHtml(String(ultimoRec.numero_nota_fiscal || '—'))} ·
         ${Utils.formatDate(ultimoRec.data_recebimento)} ·
         Almoxarife: ${Utils.escapeHtml(ultimoRec.almoxarife || '—')}
+        ${ultimoRec.nota_fiscal_url ? `·
+          <a href="${Utils.escapeHtml(ultimoRec.nota_fiscal_url)}" target="_blank"
+            style="color:#1d4ed8;text-decoration:underline;margin-left:4px;">📎 Ver NF anterior</a>` : ''}
       </div>` : ''}
 
       <!-- Nota Fiscal -->
@@ -291,6 +304,11 @@ Pages.Recebimento = {
           <div class="receb-upload-btns">
             <label class="receb-upload-btn" for="file-nf">📁 Selecionar Arquivo</label>
             <label class="receb-upload-btn" for="file-nf-camera">📷 Tirar Foto</label>
+            ${ultimoRec?.nota_fiscal_url ? `
+            <button type="button" class="receb-upload-btn" id="btn-usar-nf-anterior"
+              style="background:hsl(142,93%,8%);color:#fff;border:none;cursor:pointer;">
+              ♻️ Usar NF anterior
+            </button>` : ''}
           </div>
           <div class="receb-upload-preview" id="upload-preview-nf">
             <span class="receb-upload-file-name" id="nf-file-name"></span>
@@ -496,6 +514,7 @@ Pages.Recebimento = {
 
     if (!numeroNF)       { Components.Toast.warning('Informe o número da nota fiscal.'); return; }
     if (!this.arquivoNF) { Components.Toast.warning('Anexe o arquivo da nota fiscal.'); return; }
+    const reutilizarNFAnterior = this.arquivoNF === '_reutilizar_anterior_';
 
     const dataRec = Utils.getDataISO('data-recebimento')
       || new Date().toISOString().split('T')[0];
@@ -517,14 +536,18 @@ Pages.Recebimento = {
 
     try {
       let urlNF = null;
-      try {
-        const ext    = this.arquivoNF.name.split('.').pop();
-        const nfPath = `nf/${oc.numero}/${Date.now()}.${ext}`;
-        const uploadData = await Storage.uploadFile(nfPath, this.arquivoNF);
-        urlNF = Storage.getFileUrl(uploadData?.path || nfPath);
-      } catch (uploadErr) {
-        console.warn('[Recebimento] Upload NF:', uploadErr.message);
-        urlNF = `[arquivo local: ${this.arquivoNF.name}]`;
+      if (reutilizarNFAnterior) {
+        urlNF = this._nfAnteriorUrl || null;
+      } else {
+        try {
+          const ext    = this.arquivoNF.name.split('.').pop();
+          const nfPath = `nf/${oc.numero}/${Date.now()}.${ext}`;
+          const uploadData = await Storage.uploadFile(nfPath, this.arquivoNF);
+          urlNF = Storage.getFileUrl(uploadData?.path || nfPath);
+        } catch (uploadErr) {
+          console.warn('[Recebimento] Upload NF:', uploadErr.message);
+          urlNF = `[arquivo local: ${this.arquivoNF.name}]`;
+        }
       }
 
       const obsGerais   = document.getElementById('obs-recebimento')?.value?.trim() || '';
