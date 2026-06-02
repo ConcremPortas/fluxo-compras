@@ -906,6 +906,33 @@ Pages.Configuracoes = {
       await Storage.create(TABLES.configAlcadas, payload);
     }
     this.atualizarCalcAlcada(this.alcadasConfig);
+
+    // Recalcular alçada de todas as requisições pendentes de aprovação
+    try {
+      const STATUS_PENDENTES = [
+        'Aguardando Aprovacao Etapa 1',
+        'Aguardando Avaliacao de Compras',
+        'Aguardando Aprovacao Etapa 2',
+        'Aguardando Aprovacao da Diretoria',
+        'Devolvida ao Solicitante',
+        'Rascunho',
+      ];
+      const reqs = await Storage.list(TABLES.requisicoes).catch(() => []);
+      const pendentes = (reqs || []).filter(r => STATUS_PENDENTES.includes(r.status));
+      let atualizadas = 0;
+      for (const req of pendentes) {
+        const novaAlcada = Utils.calcAlcada(req.valor_total || 0);
+        if (novaAlcada !== req.alcada_aprovacao) {
+          await Storage.update(TABLES.requisicoes, req.id, { alcada_aprovacao: novaAlcada });
+          atualizadas++;
+        }
+      }
+      if (atualizadas > 0) {
+        Components.Toast.info(`${atualizadas} requisição(ões) com alçada recalculada.`);
+      }
+    } catch (e) {
+      console.warn('[Alçadas] Erro ao recalcular requisições:', e.message);
+    }
   },
 
   atualizarCalcAlcada(alcadas) {
