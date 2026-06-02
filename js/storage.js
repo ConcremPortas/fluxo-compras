@@ -175,6 +175,7 @@ const Storage = {
     return this.list(TABLES.centrosCusto, {
       filters: [{ column: 'ativo', op: 'eq', value: true }],
       order: { column: 'nome' },
+      limit: 5000,
     });
   },
 

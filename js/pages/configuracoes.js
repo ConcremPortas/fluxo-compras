@@ -90,7 +90,7 @@ Pages.Configuracoes = {
     if (!painel) return;
 
     try {
-      const centros = await Storage.list(TABLES.centrosCusto, { order: { column: 'nome' } });
+      const centros = await Storage.list(TABLES.centrosCusto, { order: { column: 'nome' }, limit: 5000 });
       this._centrosTodos = centros || [];
 
       const grupos = [...new Set((centros || []).map(c => c.grupo).filter(Boolean))].sort();
@@ -289,7 +289,7 @@ Pages.Configuracoes = {
   },
 
   async abrirDialogCC(id = null) {
-    const todos = await Storage.list(TABLES.centrosCusto).catch(() => []);
+    const todos = await Storage.list(TABLES.centrosCusto, { limit: 5000 }).catch(() => []);
     const grupos = [...new Set((todos || []).map(c => c.grupo).filter(Boolean))];
 
     // Gerar código automático para novo CC
@@ -460,7 +460,7 @@ Pages.Configuracoes = {
       return;
     }
 
-    const existentes = await Storage.list(TABLES.centrosCusto).catch(() => []);
+    const existentes = await Storage.list(TABLES.centrosCusto, { limit: 5000 }).catch(() => []);
     const mapCodigo  = {};
     (existentes || []).forEach(cc => {
       const chave = (cc.codigo || cc.numero || '');
