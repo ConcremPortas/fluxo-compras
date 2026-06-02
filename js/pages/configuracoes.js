@@ -304,7 +304,7 @@ Pages.Configuracoes = {
 
     Components.Modal.show({
       title:   id ? 'Editar Centro de Custo' : 'Novo Centro de Custo',
-      content: this._formCC(grupos),
+      content: this._formCC(grupos, codigoAuto),
       size:    'sm',
       footer: `
         <button class="drawer-btn-cancelar" id="btn-cancelar-cc">Cancelar</button>
@@ -319,10 +319,6 @@ Pages.Configuracoes = {
         document.getElementById('cc-grupo').value   = cc.grupo  || '';
         document.getElementById('cc-ativo').checked = !!cc.ativo;
       }).catch(() => {});
-    } else {
-      // Preencher código automático
-      const inputCodigo = document.getElementById('cc-codigo');
-      if (inputCodigo) inputCodigo.value = codigoAuto;
     }
 
     document.getElementById('btn-cancelar-cc')
@@ -331,15 +327,16 @@ Pages.Configuracoes = {
       ?.addEventListener('click', () => this.salvarCC(id));
   },
 
-  _formCC(grupos = []) {
+  _formCC(grupos = [], codigoInicial = '') {
     const optsGrupo = [...new Set(grupos.filter(Boolean))].sort().map(g =>
       `<option value="${Utils.escapeHtml(g)}">${Utils.escapeHtml(g)}</option>`
     ).join('');
     return `
       <div class="drawer-form-row">
         <div class="drawer-field">
-          <label class="drawer-label">Código <span class="required">*</span></label>
-          <input type="text" id="cc-codigo" class="drawer-input" placeholder="CC-001" maxlength="20">
+          <label class="drawer-label">Código</label>
+          <input type="text" id="cc-codigo" class="drawer-input" placeholder="Auto-gerado"
+            maxlength="20" value="${Utils.escapeHtml(codigoInicial)}">
         </div>
         <div class="drawer-field">
           <label class="drawer-label">Nome <span class="required">*</span></label>
