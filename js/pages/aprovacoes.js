@@ -74,17 +74,16 @@ Pages.Aprovacoes = {
       this._pendentes = todas.filter(r => {
         if (!STATUS_APROVACAO.includes(r.status)) return false;
 
-        // Filtro por nivel_alcada: se definido, só vê reqs até seu nível
+        // Filtro por nivel_alcada: se definido, excluir reqs acima do nível do usuário
         if (idxNivel >= 0) {
           const idxReq = HIERARQUIA.findIndex(
             n => n.toLowerCase() === (r.alcada_aprovacao || '').toLowerCase()
           );
           // Alcada da req maior que o nível do usuário → não pode aprovar
           if (idxReq >= 0 && idxReq > idxNivel) return false;
-          // Admin dentro do seu nível de alcada: pode aprovar qualquer etapa
-          if (role === 'admin') return true;
         }
 
+        // Verificar se o usuário pode aprovar no status atual (respeita etapas configuradas)
         return FluxoAprovacao.podeAprovar(r.alcada_aprovacao, r.status, role, nivel);
       });
 
