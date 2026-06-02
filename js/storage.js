@@ -172,13 +172,22 @@ const Storage = {
   ---------------------------------------------------------- */
 
   async getCentrosCusto() {
-    const { data } = await _client()
-      .from(TABLES.centrosCusto)
-      .select('*')
-      .eq('ativo', true)
-      .order('nome')
-      .range(0, 4999);
-    return data || [];
+    let todos = [];
+    let from = 0;
+    const PAGE = 1000;
+    while (true) {
+      const { data, error } = await _client()
+        .from(TABLES.centrosCusto)
+        .select('*')
+        .eq('ativo', true)
+        .order('nome')
+        .range(from, from + PAGE - 1);
+      if (error || !data || data.length === 0) break;
+      todos = todos.concat(data);
+      if (data.length < PAGE) break;
+      from += PAGE;
+    }
+    return todos;
   },
 
   /* ----------------------------------------------------------

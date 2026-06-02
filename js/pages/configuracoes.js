@@ -90,19 +90,20 @@ Pages.Configuracoes = {
     if (!painel) return;
 
     try {
+      // Buscar todos os centros em páginas de 1000 (contorna limite do PostgREST)
       let centros = [];
-      try {
-        // Buscar todos (range ignora o limite de 1000 do PostgREST)
+      let from = 0;
+      const PAGE = 1000;
+      while (true) {
         const { data, error } = await _sb
           .from(TABLES.centrosCusto)
           .select('*')
           .order('nome')
-          .range(0, 4999);
-        if (error) throw error;
-        centros = data || [];
-      } catch (rangeErr) {
-        console.warn('[CC] range falhou, tentando Storage.list:', rangeErr.message);
-        centros = await Storage.list(TABLES.centrosCusto, { order: { column: 'nome' } }) || [];
+          .range(from, from + PAGE - 1);
+        if (error || !data || data.length === 0) break;
+        centros = centros.concat(data);
+        if (data.length < PAGE) break;
+        from += PAGE;
       }
       this._centrosTodos = centros || [];
 
