@@ -476,7 +476,14 @@ Pages.Recebimento = {
           `OC ${oc.numero} — Fornecedor: ${fornecedor}`, 'recebimento');
 
       } else if (algumParcial || algumNao) {
-        // ── Recebimento parcial: registrar o que chegou e manter OC em aberto
+        // ── Recebimento parcial: itens "Sim" vão para qualidade, demais ficam pendentes
+        const itensRecebidos = itensConferencia.filter(i => i.recebido === 'Sim');
+        const itensPendentes = itensConferencia.filter(i => i.recebido !== 'Sim');
+
+        // Registrar recebimento com TODOS os itens (auditoria completa)
+        // Status: "Aguardando Qualidade" se há itens prontos, senão "Recebimento Parcial"
+        const statusRec = itensRecebidos.length > 0 ? 'Aguardando Qualidade' : 'Recebimento Parcial';
+
         await Storage.create(TABLES.recebimentos, {
           ordem_compra_id:     oc.id,
           ordem_compra_numero: oc.numero,
@@ -489,9 +496,10 @@ Pages.Recebimento = {
           observacoes:         obsGerais,
           almoxarife:          usuario.nome,
           almoxarife_email:    usuario.email,
-          status:              'Recebimento Parcial',
+          status:              statusRec,
         });
 
+        // OC permanece em aberto como Recebimento Parcial
         await Storage.update(TABLES.ordens, oc.id, { status: 'Recebimento Parcial' });
 
         await Storage.create(TABLES.historico, {
@@ -500,16 +508,22 @@ Pages.Recebimento = {
           usuario:         usuario.nome,
           usuario_email:   usuario.email,
           detalhes:        `Fornecedor: ${fornecedor}. NF: ${numeroNF}. ` +
-                           `Itens pendentes: ${itensConferencia.filter(i => i.recebido !== 'Sim').length}. ` +
+                           `${itensRecebidos.length} item(ns) prontos para qualidade. ` +
+                           `${itensPendentes.length} item(ns) pendentes. ` +
                            (atrasado ? `Entrega prevista: ${Utils.formatDate(dataEntrega)} (ATRASADA). ` : ''),
           status_anterior: 'Aguardando Recebimento',
           status_novo:     'Recebimento Parcial',
         });
 
         Components.Modal.hide();
-        Components.Toast.warning(`⚠️ Recebimento parcial registrado. OC permanece em aberto para itens pendentes.`);
-        Notificacoes.notificarNovo('urgente', 'Recebimento parcial',
-          `OC ${oc.numero} — Fornecedor: ${fornecedor}`, 'recebimento');
+        const msgQual = itensRecebidos.length > 0
+          ? `${itensRecebidos.length} item(ns) encaminhado(s) para qualidade.`
+          : '';
+        Components.Toast.warning(`⚠️ Recebimento parcial. ${msgQual} ${itensPendentes.length} item(ns) ainda pendente(s).`);
+        if (itensRecebidos.length > 0) {
+          Notificacoes.notificarNovo('recebimento', 'Itens prontos para qualidade',
+            `OC ${oc.numero} — ${itensRecebidos.length} item(ns) liberados`, 'qualidade');
+        }
 
       } else {
         // ── Tudo recebido: fluxo normal → Qualidade

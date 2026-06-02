@@ -182,7 +182,9 @@ Pages.Qualidade = {
 
     const oc         = this.ocMap[rec.ordem_compra_id] || {};
     const fornecedor = oc.fornecedor_nome || rec.fornecedor_nome || '—';
-    const totalItens = Array.isArray(rec.itens_conferencia) ? rec.itens_conferencia.length : 0;
+    const todosItens  = Array.isArray(rec.itens_conferencia) ? rec.itens_conferencia : [];
+    const itensSim    = todosItens.filter(i => i.recebido === 'Sim');
+    const totalItens  = itensSim.length > 0 ? itensSim.length : todosItens.length;
 
     Components.Modal.show({
       title:   `Análise de Qualidade — ${rec.ordem_compra_numero || 'OC'}`,
@@ -200,7 +202,24 @@ Pages.Qualidade = {
   },
 
   _htmlDialogAnalise(rec, oc, fornecedor) {
-    const itens = Array.isArray(rec.itens_conferencia) ? rec.itens_conferencia : [];
+    // Mostrar apenas itens completamente recebidos (recebido === 'Sim')
+    const todosItens    = Array.isArray(rec.itens_conferencia) ? rec.itens_conferencia : [];
+    const itensPendentes = todosItens.filter(i => i.recebido !== 'Sim');
+    const itens         = todosItens.filter(i => i.recebido === 'Sim');
+    // Fallback: se todos são Sim (recebimento completo), usar todos
+    const itensAnalise  = itens.length > 0 ? itens : todosItens;
+    const avisoPartial  = itensPendentes.length > 0
+      ? `<div style="background:#fef3c7;border:1px solid #fde68a;border-radius:8px;padding:10px 14px;margin-bottom:12px;font-size:13px;color:#92400e;">
+           ⚠️ <strong>Recebimento parcial:</strong> ${itensPendentes.length} item(ns) ainda pendente(s) não aparecem aqui.
+           Apenas os ${itensAnalise.length} item(ns) completamente recebidos estão disponíveis para análise.
+         </div>`
+      : '';
+    // Sobrescrever itens com os filtrados para o resto do método
+    rec = { ...rec, _itensParaAnalise: itensAnalise };
+    return avisoPartial + this._htmlDialogAnaliseInterno(rec, oc, fornecedor, itensAnalise);
+  },
+
+  _htmlDialogAnaliseInterno(rec, oc, fornecedor, itens) {
 
     return `
       <!-- Resumo -->
@@ -420,7 +439,12 @@ Pages.Qualidade = {
       return;
     }
 
-    const itensAnalise = (rec.itens_conferencia || []).map((item, i) => ({
+    // Usar apenas itens completamente recebidos (Sim) para análise
+    const todosItensRec = Array.isArray(rec.itens_conferencia) ? rec.itens_conferencia : [];
+    const itensParaAnalise = todosItensRec.filter(i => i.recebido === 'Sim');
+    const base = itensParaAnalise.length > 0 ? itensParaAnalise : todosItensRec;
+
+    const itensAnalise = base.map((item, i) => ({
       descricao:   item.descricao,
       criterio:    document.querySelector(`.analise-criterio[data-index="${i}"]`)?.value || 'Funcionamento',
       resultado:   document.querySelector(`.analise-resultado[data-index="${i}"]`)?.value || 'Aprovado',
