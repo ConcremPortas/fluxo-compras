@@ -62,7 +62,11 @@ Pages.Recebimento = {
         }),
       ]);
 
-      this.ocsPendentes = (ocs || []).filter(o => o.status === 'Aguardando Recebimento');
+      this.ocsPendentes = (ocs || []).filter(o =>
+        o.status === 'Aguardando Recebimento' ||
+        o.status === 'Recebimento Parcial'    ||
+        o.status === 'Entrega Atrasada'
+      );
 
       this.renderPaineisOCs(this.ocsPendentes);
       this.renderRecebimentos(recebimentos || []);
@@ -95,6 +99,13 @@ Pages.Recebimento = {
       const entrega    = oc.data_entrega_prevista
         ? Utils.formatDate(oc.data_entrega_prevista) : '—';
       const fornecedor = oc.fornecedor_nome || '—';
+      const isParcial  = oc.status === 'Recebimento Parcial';
+      const isAtrasada = oc.status === 'Entrega Atrasada';
+      const alertaBadge = isParcial
+        ? `<span style="font-size:11px;background:#fef3c7;color:#92400e;padding:2px 8px;border-radius:5px;font-weight:600;">⚠️ Itens pendentes</span>`
+        : isAtrasada
+        ? `<span style="font-size:11px;background:#fee2e2;color:#991b1b;padding:2px 8px;border-radius:5px;font-weight:600;">🚨 Entrega atrasada</span>`
+        : '';
 
       return `
         <div class="receb-oc-card" style="animation-delay:${i * 60}ms">
@@ -104,6 +115,7 @@ Pages.Recebimento = {
               <span class="receb-oc-req">
                 ${Utils.escapeHtml(oc.numero_requisicao || '')}
               </span>
+              ${alertaBadge}
             </div>
             ${Components.badge(oc.status)}
           </div>
