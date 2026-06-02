@@ -87,20 +87,13 @@ var FluxoAprovacao = (function() {
              ['diretor', 'gerente'].includes(roleEfetivo);
     }
 
-    const idxEtapa1 = HIER.indexOf((cfg.etapa1_role || '').toLowerCase());
-    const idxEtapa2 = HIER.indexOf((cfg.etapa2_role || '').toLowerCase());
-
     if (statusAtual === 'Aguardando Aprovacao Etapa 1' ||
         statusAtual === 'Aguardando Avaliacao de Compras') {
-      // Pode aprovar se o nível efetivo for >= o nível exigido na etapa
-      return idxEfetivo >= 0 && idxEtapa1 >= 0
-        ? idxEfetivo >= idxEtapa1
-        : roleEfetivo === (cfg.etapa1_role || '').toLowerCase();
+      // Matching estrito: só aprova quem tem exatamente o role da etapa
+      return roleEfetivo === (cfg.etapa1_role || '').toLowerCase();
     }
     if (statusAtual === 'Aguardando Aprovacao Etapa 2') {
-      return idxEfetivo >= 0 && idxEtapa2 >= 0
-        ? idxEfetivo >= idxEtapa2
-        : roleEfetivo === (cfg.etapa2_role || '').toLowerCase();
+      return roleEfetivo === (cfg.etapa2_role || '').toLowerCase();
     }
     if (statusAtual === 'Aguardando Aprovacao da Diretoria') {
       return ['diretor', 'gerente'].includes(roleEfetivo);
