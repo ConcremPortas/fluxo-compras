@@ -454,6 +454,15 @@ Pages.Aprovacoes = {
             <span class="aprov-radio-desc">Processo encerrado definitivamente.</span>
           </div>
         </label>
+        ${!isDiretor && !isDiretoria ? `
+        <label class="aprov-radio-option" style="border-color:#8b5cf6;">
+          <input type="radio" name="decisao-atual" value="encaminhar_diretor" />
+          <span class="aprov-radio-icon">📤</span>
+          <div>
+            <span class="aprov-radio-titulo" style="color:#6d28d9;">Encaminhar ao Diretor</span>
+            <span class="aprov-radio-desc">Escalar para aprovação da Diretoria.</span>
+          </div>
+        </label>` : ''}
       </div>
 
       <span class="aprov-parecer-label">Parecer / Justificativa *</span>
@@ -488,12 +497,14 @@ Pages.Aprovacoes = {
         : user.role === 'diretor';
       const isDiretoriaStatus = status === 'Aguardando Aprovacao da Diretoria';
       let novoStatus;
-      if (decisao !== 'aprovar') {
+      if (decisao === 'encaminhar_diretor') {
+        novoStatus = 'Aguardando Aprovacao da Diretoria';
+      } else if (decisao !== 'aprovar') {
         novoStatus = FluxoAprovacao.proximoStatus(alcada, status, decisao);
       } else if (isDiretoriaStatus || isDiretor) {
         novoStatus = 'Em Cotacao';
       } else {
-        novoStatus = 'Aguardando Aprovacao da Diretoria';
+        novoStatus = FluxoAprovacao.proximoStatus(alcada, status, decisao);
       }
       const payload = { status: novoStatus };
 
@@ -518,8 +529,10 @@ Pages.Aprovacoes = {
       await Storage.create(TABLES.historico, {
         requisicao_id:   reqId,
         acao:            FluxoAprovacao.labelEtapa(alcada, status) + ' — ' +
-                         (decisao === 'aprovar'  ? 'Aprovado'  :
-                          decisao === 'devolver' ? 'Devolvido' : 'Reprovado'),
+                         (decisao === 'aprovar'             ? 'Aprovado'              :
+                          decisao === 'devolver'            ? 'Devolvido'             :
+                          decisao === 'encaminhar_diretor'  ? 'Encaminhado ao Diretor':
+                                                             'Reprovado'),
         usuario:         user.nome,
         usuario_email:   user.email,
         detalhes:        parecer,
