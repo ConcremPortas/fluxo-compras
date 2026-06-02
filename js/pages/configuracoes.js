@@ -367,18 +367,25 @@ Pages.Configuracoes = {
 
     if (!nome) { Components.Toast.warning('Informe o nome.'); return; }
 
+    const btn = document.getElementById('btn-salvar-cc');
+    if (btn) { btn.disabled = true; btn.textContent = '⏳ Salvando...'; }
+
     try {
       if (id) {
-        await Storage.update(TABLES.centrosCusto, id, { codigo, nome, grupo, ativo });
+        const { error } = await _sb.from(TABLES.centrosCusto).update({ codigo, nome, grupo, ativo }).eq('id', id);
+        if (error) throw new Error(error.message);
         Components.Toast.success('Centro de custo atualizado!');
       } else {
-        await Storage.create(TABLES.centrosCusto, { codigo, nome, grupo, ativo: true });
+        const { error } = await _sb.from(TABLES.centrosCusto).insert({ codigo, nome, grupo, ativo: true });
+        if (error) throw new Error(error.message);
         Components.Toast.success('Centro de custo criado!');
       }
       Components.Modal.hide();
       await this.carregarAbaCentros();
     } catch (e) {
-      Components.Toast.error('Erro ao salvar: ' + e.message);
+      console.error('[CC salvar]', e);
+      Components.Toast.error('Erro ao salvar: ' + (e.message || e));
+      if (btn) { btn.disabled = false; btn.textContent = 'Salvar'; }
     }
   },
 
