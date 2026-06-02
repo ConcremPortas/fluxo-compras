@@ -214,9 +214,21 @@ Pages.Recebimento = {
 
     this._statusAnteriorMap = statusAnteriorMap;
 
+    // Buscar último recebimento para pré-preencher NF
+    let ultimoRecebimento = null;
+    if (this.ocAtual.status === 'Recebimento Parcial') {
+      try {
+        const recs = await Storage.list(TABLES.recebimentos, {
+          filters: [{ column: 'ordem_compra_id', op: 'eq', value: ocId }],
+          order:   { column: 'created_at', ascending: false },
+        });
+        if (recs && recs.length > 0) ultimoRecebimento = recs[0];
+      } catch (_) {}
+    }
+
     Components.Modal.show({
       title:   `Registrar Recebimento — ${this.ocAtual.numero}`,
-      content: this.htmlDialogRecebimento(this.ocAtual, statusAnteriorMap),
+      content: this.htmlDialogRecebimento(this.ocAtual, statusAnteriorMap, ultimoRecebimento),
       size:    'xxl',
       footer: `
         <button class="drawer-btn-cancelar" id="btn-cancelar-recebimento">Cancelar</button>
@@ -232,7 +244,7 @@ Pages.Recebimento = {
       ?.addEventListener('click', () => this.confirmarRecebimento(ocId));
   },
 
-  htmlDialogRecebimento(oc, statusAnteriorMap = {}) {
+  htmlDialogRecebimento(oc, statusAnteriorMap = {}, ultimoRec = null) {
     const todosItens = Array.isArray(oc.itens) ? oc.itens : [];
     // Separar itens já recebidos (travados) dos pendentes (editáveis)
     const itensRecebidos = todosItens.filter(i => statusAnteriorMap[i.descricao] === 'Sim');
@@ -241,6 +253,14 @@ Pages.Recebimento = {
     const temRecebidosAnteriores = itensRecebidos.length > 0;
 
     return `
+      ${ultimoRec ? `
+      <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:10px 14px;margin-bottom:16px;font-size:13px;color:#1e40af;">
+        📋 <strong>Recebimento anterior:</strong>
+        NF ${Utils.escapeHtml(String(ultimoRec.numero_nota_fiscal || '—'))} ·
+        ${Utils.formatDate(ultimoRec.data_recebimento)} ·
+        Almoxarife: ${Utils.escapeHtml(ultimoRec.almoxarife || '—')}
+      </div>` : ''}
+
       <!-- Nota Fiscal -->
       <div class="receb-dialog-section">
         <div class="receb-dialog-section-title">📄 Nota Fiscal</div>
@@ -248,11 +268,14 @@ Pages.Recebimento = {
           <div class="drawer-field">
             <label class="drawer-label" for="numero-nf">Número da Nota Fiscal *</label>
             <input type="number" class="drawer-input" id="numero-nf"
-              placeholder="Ex: 001234" min="0" step="1" inputmode="numeric" />
+              placeholder="Ex: 001234" min="0" step="1" inputmode="numeric"
+              value="${ultimoRec?.numero_nota_fiscal || ''}" />
+            ${ultimoRec?.numero_nota_fiscal ? `<span style="font-size:11px;color:#64748b;">NF anterior: ${Utils.escapeHtml(String(ultimoRec.numero_nota_fiscal))}</span>` : ''}
           </div>
           <div class="drawer-field">
             <label class="drawer-label" for="data-recebimento">Data de Recebimento</label>
-            <input type="date" class="drawer-input" id="data-recebimento" />
+            <input type="date" class="drawer-input" id="data-recebimento"
+              value="${ultimoRec?.data_recebimento || ''}" />
           </div>
         </div>
 
