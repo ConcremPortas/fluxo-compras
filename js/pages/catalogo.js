@@ -353,6 +353,12 @@ Pages.Catalogo = {
                 color:${item.ativo !== false ? '#c2410c' : 'hsl(142,70%,28%)'};
                 border-color:${item.ativo !== false ? '#fed7aa' : 'hsla(142,70%,40%,0.3)'};">
               ${item.ativo !== false ? '🔒 Inativar' : '🔓 Ativar'}
+            </button>
+            <button class="cfg-btn-acao danger btn-excluir-item"
+              data-id="${Utils.escapeHtml(String(item.id))}"
+              data-descricao="${Utils.escapeHtml(item.descricao || '')}"
+              title="Excluir item" style="margin-left:4px;">
+              🗑️
             </button>` : ''}
         </td>
       </tr>`).join('');
@@ -382,6 +388,29 @@ Pages.Catalogo = {
       btn.addEventListener('click', () =>
         this._toggleAtivo(btn.dataset.id, btn.dataset.ativo === 'true'))
     );
+    container.querySelectorAll('.btn-excluir-item').forEach(btn =>
+      btn.addEventListener('click', () =>
+        this._excluirItem(btn.dataset.id, btn.dataset.descricao))
+    );
+  },
+
+  _excluirItem(id, descricao) {
+    Components.Modal.confirm({
+      title:        'Excluir item do catálogo',
+      message:      `Deseja realmente excluir o item "${descricao}"? Esta ação não pode ser desfeita.`,
+      danger:       true,
+      icon:         '🗑️',
+      confirmLabel: 'Excluir',
+      onConfirm: async () => {
+        try {
+          await Storage.delete(TABLES.catalogoItens, id);
+          Components.Toast.success('Item excluído do catálogo.');
+          await this._carregar();
+        } catch (e) {
+          Components.Toast.error('Erro ao excluir: ' + e.message);
+        }
+      },
+    });
   },
 
   /* ----------------------------------------------------------
