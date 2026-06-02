@@ -289,6 +289,9 @@ Pages.Fornecedores = {
     tbody.querySelectorAll('.btn-ver-forn').forEach(btn =>
       btn.addEventListener('click', () => this.verDetalhes(btn.dataset.id))
     );
+    tbody.querySelectorAll('.btn-excluir-forn').forEach(btn =>
+      btn.addEventListener('click', () => this.excluirFornecedor(btn.dataset.id, btn.dataset.nome))
+    );
   },
 
   _linhaFornecedor(f, index = 0) {
@@ -333,6 +336,12 @@ Pages.Fornecedores = {
           <button class="forn-btn-ver btn-ver-forn"
             data-id="${Utils.escapeHtml(String(f.id))}" title="Ver detalhes">
             👁️
+          </button>
+          <button class="cfg-btn-acao danger btn-excluir-forn"
+            data-id="${Utils.escapeHtml(String(f.id))}"
+            data-nome="${Utils.escapeHtml(f.nome)}"
+            title="Excluir fornecedor" style="margin-left:4px;">
+            🗑️
           </button>
         </td>
       </tr>`;
@@ -444,6 +453,25 @@ Pages.Fornecedores = {
             <div class="receb-empty-text">Nenhuma ordem de compra encontrada.</div>
           </div>`}
       </div>`;
+  },
+
+  excluirFornecedor(id, nome) {
+    Components.Modal.confirm({
+      title:        'Excluir fornecedor',
+      message:      `Deseja realmente excluir o fornecedor "${nome}"? Esta ação não pode ser desfeita.`,
+      danger:       true,
+      icon:         '🗑️',
+      confirmLabel: 'Excluir',
+      onConfirm: async () => {
+        try {
+          await Storage.delete(TABLES.fornecedores, id);
+          Components.Toast.success(`Fornecedor "${nome}" excluído com sucesso.`);
+          await this.render();
+        } catch (e) {
+          Components.Toast.error('Erro ao excluir: ' + e.message);
+        }
+      },
+    });
   },
 };
 
