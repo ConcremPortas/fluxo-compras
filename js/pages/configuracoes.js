@@ -90,7 +90,11 @@ Pages.Configuracoes = {
     if (!painel) return;
 
     try {
-      const centros = await Storage.list(TABLES.centrosCusto, { order: { column: 'nome' }, limit: 5000 });
+      const { data: centros } = await _sb
+        .from(TABLES.centrosCusto)
+        .select('*')
+        .order('nome')
+        .range(0, 4999);
       this._centrosTodos = centros || [];
 
       const grupos = [...new Set((centros || []).map(c => c.grupo).filter(Boolean))].sort();
