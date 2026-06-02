@@ -611,24 +611,43 @@ Pages.Recebimento = {
         const itensRecebidos = itensConferencia.filter(i => i.recebido === 'Sim');
         const itensPendentes = itensConferencia.filter(i => i.recebido !== 'Sim');
 
-        // Registrar recebimento com TODOS os itens (auditoria completa)
-        // Status: "Aguardando Qualidade" se há itens prontos, senão "Recebimento Parcial"
-        const statusRec = itensRecebidos.length > 0 ? 'Aguardando Qualidade' : 'Recebimento Parcial';
+        // Verificar se já existe recebimento "Aguardando Qualidade" para esta OC
+        // Se sim, MESCLAR os novos itens (evita duplicatas na qualidade)
+        const recsExistentes = await Storage.list(TABLES.recebimentos, {
+          filters: [
+            { column: 'ordem_compra_id', op: 'eq', value: oc.id },
+            { column: 'status',          op: 'eq', value: 'Aguardando Qualidade' },
+          ],
+        }).catch(() => []);
 
-        await Storage.create(TABLES.recebimentos, {
-          ordem_compra_id:     oc.id,
-          ordem_compra_numero: oc.numero,
-          requisicao_id:       oc.requisicao_id || null,
-          fornecedor_nome:     fornecedor,
-          data_recebimento:    dataRec,
-          numero_nota_fiscal:  numeroNF,
-          nota_fiscal_url:     urlNF,
-          itens_conferencia:   itensConferencia,
-          observacoes:         obsGerais,
-          almoxarife:          usuario.nome,
-          almoxarife_email:    usuario.email,
-          status:              statusRec,
-        });
+        if (recsExistentes && recsExistentes.length > 0 && itensRecebidos.length > 0) {
+          // Adicionar novos itens ao recebimento existente
+          const recExistente = recsExistentes[0];
+          const itensExistentes = Array.isArray(recExistente.itens_conferencia)
+            ? recExistente.itens_conferencia : [];
+          const itensAtualizados = [...itensExistentes, ...itensRecebidos];
+          await Storage.update(TABLES.recebimentos, recExistente.id, {
+            itens_conferencia: itensAtualizados,
+            observacoes: obsGerais || recExistente.observacoes,
+          });
+        } else {
+          // Criar novo recebimento (primeiro round com itens prontos)
+          const statusRec = itensRecebidos.length > 0 ? 'Aguardando Qualidade' : 'Recebimento Parcial';
+          await Storage.create(TABLES.recebimentos, {
+            ordem_compra_id:     oc.id,
+            ordem_compra_numero: oc.numero,
+            requisicao_id:       oc.requisicao_id || null,
+            fornecedor_nome:     fornecedor,
+            data_recebimento:    dataRec,
+            numero_nota_fiscal:  numeroNF,
+            nota_fiscal_url:     urlNF,
+            itens_conferencia:   itensRecebidos.length > 0 ? itensRecebidos : itensConferencia,
+            observacoes:         obsGerais,
+            almoxarife:          usuario.nome,
+            almoxarife_email:    usuario.email,
+            status:              statusRec,
+          });
+        }
 
         // OC permanece em aberto como Recebimento Parcial
         await Storage.update(TABLES.ordens, oc.id, { status: 'Recebimento Parcial' });
