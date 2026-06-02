@@ -443,43 +443,115 @@ Pages.Recebimento = {
         urlNF = `[arquivo local: ${this.arquivoNF.name}]`;
       }
 
-      await Storage.create(TABLES.recebimentos, {
-        ordem_compra_id:     oc.id,
-        ordem_compra_numero: oc.numero,
-        requisicao_id:       oc.requisicao_id || null,
-        fornecedor_nome:     oc.fornecedor_nome   || null,
-        data_recebimento:    dataRec,
-        numero_nota_fiscal:  numeroNF,
-        nota_fiscal_url:     urlNF,
-        itens_conferencia:   itensConferencia,
-        observacoes:         document.getElementById('obs-recebimento')?.value?.trim() || '',
-        almoxarife:          usuario.nome,
-        almoxarife_email:    usuario.email,
-        status:              'Aguardando Qualidade',
-      });
+      const obsGerais   = document.getElementById('obs-recebimento')?.value?.trim() || '';
+      const fornecedor  = oc.fornecedor_nome || '—';
+      const hoje        = new Date().toISOString().split('T')[0];
+      const dataEntrega = oc.data_entrega_prevista || oc.data_necessidade || null;
+      const atrasado    = dataEntrega && hoje > dataEntrega;
 
-      await Storage.update(TABLES.ordens, oc.id, { status: 'Recebida' });
+      // Classificar situação: Completo / Parcial / Não Recebido
+      const algumNao      = itensConferencia.some(i => i.recebido === 'Não');
+      const algumParcial  = itensConferencia.some(i => i.recebido === 'Parcial');
+      const tudoNao       = itensConferencia.every(i => i.recebido === 'Não');
 
-      if (oc.requisicao_id) {
-        await Storage.update(TABLES.requisicoes, oc.requisicao_id, {
-          status: 'Aguardando Analise de Qualidade',
+      if (tudoNao) {
+        // ── Nenhum item recebido: marcar OC como Entrega Atrasada e registrar ocorrência
+        await Storage.update(TABLES.ordens, oc.id, { status: 'Entrega Atrasada' });
+
+        await Storage.create(TABLES.historico, {
+          requisicao_id:   oc.requisicao_id || null,
+          acao:            'Entrega Não Realizada',
+          usuario:         usuario.nome,
+          usuario_email:   usuario.email,
+          detalhes:        `Fornecedor: ${fornecedor}. ` +
+                           (atrasado ? `Entrega prevista: ${Utils.formatarData(dataEntrega)} (ATRASADA). ` : '') +
+                           `Observações: ${obsGerais || '—'}`,
+          status_anterior: 'Aguardando Recebimento',
+          status_novo:     'Entrega Atrasada',
         });
+
+        Components.Modal.hide();
+        Components.Toast.warning(`⚠️ Entrega não realizada registrada. Fornecedor: ${fornecedor}.`);
+        Notificacoes.notificarNovo('urgente', 'Entrega não realizada',
+          `OC ${oc.numero} — Fornecedor: ${fornecedor}`, 'recebimento');
+
+      } else if (algumParcial || algumNao) {
+        // ── Recebimento parcial: registrar o que chegou e manter OC em aberto
+        await Storage.create(TABLES.recebimentos, {
+          ordem_compra_id:     oc.id,
+          ordem_compra_numero: oc.numero,
+          requisicao_id:       oc.requisicao_id || null,
+          fornecedor_nome:     fornecedor,
+          data_recebimento:    dataRec,
+          numero_nota_fiscal:  numeroNF,
+          nota_fiscal_url:     urlNF,
+          itens_conferencia:   itensConferencia,
+          observacoes:         obsGerais,
+          almoxarife:          usuario.nome,
+          almoxarife_email:    usuario.email,
+          status:              'Recebimento Parcial',
+        });
+
+        await Storage.update(TABLES.ordens, oc.id, { status: 'Recebimento Parcial' });
+
+        await Storage.create(TABLES.historico, {
+          requisicao_id:   oc.requisicao_id || null,
+          acao:            'Recebimento Parcial',
+          usuario:         usuario.nome,
+          usuario_email:   usuario.email,
+          detalhes:        `Fornecedor: ${fornecedor}. NF: ${numeroNF}. ` +
+                           `Itens pendentes: ${itensConferencia.filter(i => i.recebido !== 'Sim').length}. ` +
+                           (atrasado ? `Entrega prevista: ${Utils.formatarData(dataEntrega)} (ATRASADA). ` : ''),
+          status_anterior: 'Aguardando Recebimento',
+          status_novo:     'Recebimento Parcial',
+        });
+
+        Components.Modal.hide();
+        Components.Toast.warning(`⚠️ Recebimento parcial registrado. OC permanece em aberto para itens pendentes.`);
+        Notificacoes.notificarNovo('urgente', 'Recebimento parcial',
+          `OC ${oc.numero} — Fornecedor: ${fornecedor}`, 'recebimento');
+
+      } else {
+        // ── Tudo recebido: fluxo normal → Qualidade
+        await Storage.create(TABLES.recebimentos, {
+          ordem_compra_id:     oc.id,
+          ordem_compra_numero: oc.numero,
+          requisicao_id:       oc.requisicao_id || null,
+          fornecedor_nome:     fornecedor,
+          data_recebimento:    dataRec,
+          numero_nota_fiscal:  numeroNF,
+          nota_fiscal_url:     urlNF,
+          itens_conferencia:   itensConferencia,
+          observacoes:         obsGerais,
+          almoxarife:          usuario.nome,
+          almoxarife_email:    usuario.email,
+          status:              'Aguardando Qualidade',
+        });
+
+        await Storage.update(TABLES.ordens, oc.id, { status: 'Recebida' });
+
+        if (oc.requisicao_id) {
+          await Storage.update(TABLES.requisicoes, oc.requisicao_id, {
+            status: 'Aguardando Analise de Qualidade',
+          });
+        }
+
+        await Storage.create(TABLES.historico, {
+          requisicao_id:   oc.requisicao_id || null,
+          acao:            'Material Recebido',
+          usuario:         usuario.nome,
+          usuario_email:   usuario.email,
+          detalhes:        `Fornecedor: ${fornecedor}. NF: ${numeroNF}. ${itensConferencia.length} itens conferidos.`,
+          status_anterior: 'Aguardando Recebimento',
+          status_novo:     'Aguardando Analise de Qualidade',
+        });
+
+        Components.Modal.hide();
+        Components.Toast.success('✅ Recebimento registrado! Material aguarda análise de qualidade.');
+        Notificacoes.notificarNovo('recebimento', 'Recebimento confirmado',
+          'Material registrado e enviado para qualidade', 'qualidade');
       }
 
-      await Storage.create(TABLES.historico, {
-        requisicao_id:   oc.requisicao_id || null,
-        acao:            'Material Recebido',
-        usuario:         usuario.nome,
-        usuario_email:   usuario.email,
-        detalhes:        `NF: ${numeroNF}. ${itensConferencia.length} itens conferidos.`,
-        status_anterior: 'Aguardando Recebimento',
-        status_novo:     'Aguardando Analise de Qualidade',
-      });
-
-      Components.Modal.hide();
-      Components.Toast.success('✅ Recebimento registrado! Material aguarda análise de qualidade.');
-      Notificacoes.notificarNovo('recebimento', 'Recebimento confirmado',
-        'Material registrado e enviado para qualidade', 'qualidade');
       App._loadAllBadges?.();
       await this.loadDados();
 
