@@ -457,7 +457,7 @@ Pages.NovaRequisicao = {
         <div>
 
           <!-- Seção 1 · Identificação -->
-          <div class="nova-req-section">
+          <div class="nova-req-section" style="position:relative;z-index:100;overflow:visible;">
             <div class="nova-req-section-header">
               <span class="nova-req-section-icon">👤</span>
               Identificação do Solicitante
@@ -1540,7 +1540,7 @@ Pages.EditarRequisicao = {
         <div>
 
           <!-- Seção 1 · Identificação -->
-          <div class="nova-req-section">
+          <div class="nova-req-section" style="position:relative;z-index:100;overflow:visible;">
             <div class="nova-req-section-header">
               <span class="nova-req-section-icon">👤</span>
               Identificação do Solicitante
