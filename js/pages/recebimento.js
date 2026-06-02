@@ -464,7 +464,7 @@ Pages.Recebimento = {
           usuario:         usuario.nome,
           usuario_email:   usuario.email,
           detalhes:        `Fornecedor: ${fornecedor}. ` +
-                           (atrasado ? `Entrega prevista: ${Utils.formatarData(dataEntrega)} (ATRASADA). ` : '') +
+                           (atrasado ? `Entrega prevista: ${Utils.formatDate(dataEntrega)} (ATRASADA). ` : '') +
                            `Observações: ${obsGerais || '—'}`,
           status_anterior: 'Aguardando Recebimento',
           status_novo:     'Entrega Atrasada',
@@ -501,7 +501,7 @@ Pages.Recebimento = {
           usuario_email:   usuario.email,
           detalhes:        `Fornecedor: ${fornecedor}. NF: ${numeroNF}. ` +
                            `Itens pendentes: ${itensConferencia.filter(i => i.recebido !== 'Sim').length}. ` +
-                           (atrasado ? `Entrega prevista: ${Utils.formatarData(dataEntrega)} (ATRASADA). ` : ''),
+                           (atrasado ? `Entrega prevista: ${Utils.formatDate(dataEntrega)} (ATRASADA). ` : ''),
           status_anterior: 'Aguardando Recebimento',
           status_novo:     'Recebimento Parcial',
         });
