@@ -519,16 +519,25 @@ Pages.Recebimento = {
     const dataRec = Utils.getDataISO('data-recebimento')
       || new Date().toISOString().split('T')[0];
 
-    const itens = Array.isArray(oc.itens) ? oc.itens : [];
-    const itensConferencia = itens.map((item, i) => ({
+    const todosItens     = Array.isArray(oc.itens) ? oc.itens : [];
+    const statusAnterior = this._statusAnteriorMap || {};
+
+    // Separar itens já recebidos (travados no form) dos pendentes (editáveis)
+    const itensJaTravados = todosItens.filter(i => statusAnterior[i.descricao] === 'Sim');
+    const itensPendentes  = todosItens.filter(i => statusAnterior[i.descricao] !== 'Sim');
+
+    // itensConferencia = APENAS os itens editáveis deste round
+    // Os índices no DOM começam após as linhas travadas (itensJaTravados.length)
+    const offset = itensJaTravados.length;
+    const itensConferencia = itensPendentes.map((item, i) => ({
       descricao:           item.descricao,
       quantidade_esperada: item.quantidade,
       quantidade_recebida: parseFloat(
-        document.querySelector(`.conf-qtd-recebida[data-index="${i}"]`)?.value ?? item.quantidade
+        document.querySelector(`.conf-qtd-recebida[data-index="${i + offset}"]`)?.value ?? item.quantidade
       ),
-      recebido:    document.querySelector(`.conf-recebido[data-index="${i}"]`)?.value   || 'Sim',
-      condicao:    document.querySelector(`.conf-condicao[data-index="${i}"]`)?.value   || 'Conforme',
-      observacoes: document.querySelector(`.conf-obs[data-index="${i}"]`)?.value?.trim() || '',
+      recebido:    document.querySelector(`.conf-recebido[data-index="${i + offset}"]`)?.value   || 'Sim',
+      condicao:    document.querySelector(`.conf-condicao[data-index="${i + offset}"]`)?.value   || 'Conforme',
+      observacoes: document.querySelector(`.conf-obs[data-index="${i + offset}"]`)?.value?.trim() || '',
     }));
 
     const btn = document.getElementById('btn-confirmar-recebimento');
