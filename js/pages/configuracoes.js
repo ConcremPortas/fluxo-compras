@@ -90,11 +90,20 @@ Pages.Configuracoes = {
     if (!painel) return;
 
     try {
-      const { data: centros } = await _sb
-        .from(TABLES.centrosCusto)
-        .select('*')
-        .order('nome')
-        .range(0, 4999);
+      let centros = [];
+      try {
+        // Buscar todos (range ignora o limite de 1000 do PostgREST)
+        const { data, error } = await _sb
+          .from(TABLES.centrosCusto)
+          .select('*')
+          .order('nome')
+          .range(0, 4999);
+        if (error) throw error;
+        centros = data || [];
+      } catch (rangeErr) {
+        console.warn('[CC] range falhou, tentando Storage.list:', rangeErr.message);
+        centros = await Storage.list(TABLES.centrosCusto, { order: { column: 'nome' } }) || [];
+      }
       this._centrosTodos = centros || [];
 
       const grupos = [...new Set((centros || []).map(c => c.grupo).filter(Boolean))].sort();
