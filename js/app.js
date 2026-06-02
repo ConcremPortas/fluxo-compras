@@ -258,6 +258,12 @@ if (this.currentUser) {
           ],
         });
         console.info('[Fluxo Compras] Configuração de alçadas criada automaticamente.');
+      } else {
+        // Aplicar alçadas do banco ao calcAlcada — evita usar fallback hardcoded
+        const faixas = alcadas[0]?.alcadas || alcadas;
+        if (Array.isArray(faixas) && faixas.length > 0 && Pages?.Configuracoes?.atualizarCalcAlcada) {
+          Pages.Configuracoes.atualizarCalcAlcada(faixas);
+        }
       }
 
       // Verificar permissões salvas e aplicar ao objeto em memória
