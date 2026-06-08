@@ -255,9 +255,9 @@ Pages.Login = {
       App.currentUser = sessao;
       await Permissoes.carregar();
 
-      const nivel = Permissoes._userMeta[perfil.id]?.nivel_alcada;
-      if (nivel) {
-        sessao.nivel_alcada = nivel;
+      const niveisLogin = Permissoes.getNiveisAlcada(perfil.id);
+      if (niveisLogin.length > 0) {
+        sessao.nivel_alcadas = niveisLogin;
         App.currentUser = sessao;
         sessionStorage.setItem('fc_usuario_logado', JSON.stringify(sessao));
       }

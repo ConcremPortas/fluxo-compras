@@ -258,7 +258,13 @@ Pages.Requisicoes = {
       return;
     }
 
-    const rows = dados.map((r, i) => `
+    const user         = App.currentUser;
+    const STATUS_EXCLUIVEIS = ['Aguardando Avaliacao de Compras', 'Devolvida ao Solicitante', 'Nao Aprovada', 'Cancelada'];
+    const podeExcluirGlobal = user.role === 'admin' || Permissoes.pode('requisicoes', 'excluir');
+
+    const rows = dados.map((r, i) => {
+      const podeDel = podeExcluirGlobal && STATUS_EXCLUIVEIS.includes(r.status);
+      return `
       <tr style="animation-delay:${i * 40}ms;">
         <td>
           <span class="req-numero-badge" data-id="${Utils.escapeHtml(String(r.id))}">
@@ -283,12 +289,18 @@ Pages.Requisicoes = {
             </span>` : ''}
         </td>
         <td>${Components.badge(r.status)}</td>
-        <td>
+        <td style="white-space:nowrap;">
           <button class="req-btn-ver" data-id="${Utils.escapeHtml(String(r.id))}">
             👁️ Ver
           </button>
+          ${podeDel ? `
+          <button class="req-btn-del" data-id="${Utils.escapeHtml(String(r.id))}" data-num="${Utils.escapeHtml(r.numero || '')}"
+            style="margin-left:4px;padding:4px 8px;border-radius:6px;border:1.5px solid #fed7d7;background:#fff5f5;color:#e53e3e;font-size:12px;font-weight:600;cursor:pointer;">
+            🗑️
+          </button>` : ''}
         </td>
-      </tr>`).join('');
+      </tr>`;
+    }).join('');
 
     container.innerHTML = `
       <div class="req-table-wrap">
@@ -312,6 +324,23 @@ Pages.Requisicoes = {
     // Delegação: número RC e botão Ver
     container.querySelectorAll('.req-numero-badge, .req-btn-ver').forEach(el => {
       el.addEventListener('click', () => App.navigate('requisicoes/' + el.dataset.id));
+    });
+
+    // Botões de excluir direto da tabela
+    container.querySelectorAll('.req-btn-del').forEach(el => {
+      el.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const id  = el.dataset.id;
+        const num = el.dataset.num || id;
+        if (!confirm(`Excluir a requisição ${num}?\n\nEsta ação não pode ser desfeita.`)) return;
+        try {
+          await Storage.delete(TABLES.requisicoes, id);
+          Components.Toast.success(`Requisição ${num} excluída.`);
+          await Pages.Requisicoes.render();
+        } catch (err) {
+          Components.Toast.error('Erro ao excluir: ' + (err.message || err));
+        }
+      });
     });
   },
 
@@ -1234,8 +1263,16 @@ Pages.RequisicaoDetalhe = {
     const user    = App.currentUser;
     const content = document.getElementById('main-content');
 
-    const podeReenviar = req.status === 'Devolvida ao Solicitante' &&
-      (user.email === req.solicitante_email || ['supervisor', 'admin'].includes(user.role));
+    const STATUS_EDITAVEIS  = ['Devolvida ao Solicitante', 'Aguardando Avaliacao de Compras'];
+    const STATUS_EXCLUIVEIS = ['Aguardando Avaliacao de Compras', 'Devolvida ao Solicitante', 'Nao Aprovada', 'Cancelada'];
+
+    const isOwner     = user.email === req.solicitante_email;
+    const canEdit     = STATUS_EDITAVEIS.includes(req.status)  &&
+                        (isOwner || user.role === 'admin' || Permissoes.pode('requisicoes', 'editar'));
+    // Para editar via rota /editar, o req precisa estar "Devolvida"
+    const podeReenviar = req.status === 'Devolvida ao Solicitante' && canEdit;
+    const podeExcluir  = STATUS_EXCLUIVEIS.includes(req.status) &&
+                         (user.role === 'admin' || Permissoes.pode('requisicoes', 'excluir'));
 
     content.innerHTML = `
       <!-- ── HEADER ── -->
@@ -1258,6 +1295,11 @@ Pages.RequisicaoDetalhe = {
           ${podeReenviar ? `
             <button class="btn btn-primary btn-sm" id="btn-reenviar-req">
               ✏️ Editar e Reenviar
+            </button>` : ''}
+          ${podeExcluir ? `
+            <button class="btn btn-sm" id="btn-excluir-req"
+              style="background:#fff5f5;color:#e53e3e;border:1.5px solid #fed7d7;">
+              🗑️ Excluir
             </button>` : ''}
         </div>
       </div>
@@ -1399,6 +1441,20 @@ Pages.RequisicaoDetalhe = {
 
     document.getElementById('btn-voltar-req')?.addEventListener('click', () => App.navigate('requisicoes'));
     document.getElementById('btn-reenviar-req')?.addEventListener('click', () => this._reabrirEdicao());
+    document.getElementById('btn-excluir-req')?.addEventListener('click', () => this._confirmarExcluir());
+  },
+
+  async _confirmarExcluir() {
+    const req = this._req;
+    if (!req) return;
+    if (!confirm(`Excluir a requisição ${req.numero}?\n\nEsta ação não pode ser desfeita.`)) return;
+    try {
+      await Storage.delete(TABLES.requisicoes, req.id);
+      Components.Toast.success(`Requisição ${req.numero} excluída.`);
+      App.navigate('requisicoes');
+    } catch (e) {
+      Components.Toast.error('Erro ao excluir requisição: ' + (e.message || e));
+    }
   },
 
   _renderPareceres(req) {

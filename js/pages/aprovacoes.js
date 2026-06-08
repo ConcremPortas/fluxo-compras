@@ -20,9 +20,10 @@ Pages.Aprovacoes = {
     const user = App.currentUser;
     const isAdmin = user.role === 'admin';
 
-    // Acesso permitido por role de aprovador OU por nivel_alcada configurado
+    // Acesso permitido por role de aprovador OU por nivel_alcadas configurado
     const ROLES_APROVADORES = ['admin','gerente','diretor'];
-    const temAcesso = ROLES_APROVADORES.includes(user.role) || !!user.nivel_alcada;
+    const niveisCheck = user?.nivel_alcadas || (user?.nivel_alcada ? [user.nivel_alcada] : []);
+    const temAcesso = ROLES_APROVADORES.includes(user.role) || niveisCheck.length > 0;
     if (!temAcesso) {
       document.getElementById('main-content').innerHTML = `
         <div class="aprov-header"><h1>Aprovações</h1><p>Requisições pendentes de avaliação</p></div>
@@ -51,9 +52,9 @@ Pages.Aprovacoes = {
   async _carregar() {
     const user  = App.currentUser;
     const role  = user?.role;
-    // nivel_alcada define o nível máximo de requisições que o usuário pode aprovar
-    // (independente do grupo/role). Ex: admin com nivel_alcada 'Supervisor' só vê reqs Supervisor.
-    const nivel = user?.nivel_alcada || null;
+    // nivel_alcadas: array de alcadas atribuídas (normaliza legado string → array)
+    const niveisRaw = user?.nivel_alcadas || (user?.nivel_alcada ? [user.nivel_alcada] : []);
+    const nivel = niveisRaw.length > 0 ? niveisRaw : null; // null = sem restrição
 
     const STATUS_APROVACAO = [
       'Aguardando Aprovacao Etapa 1',
@@ -62,10 +63,6 @@ Pages.Aprovacoes = {
       'Aguardando Avaliacao de Compras',
     ];
 
-    // Hierarquia de alçadas em ordem crescente (sem Coordenador)
-    const HIERARQUIA = ['Supervisor', 'Gerente', 'Diretor'];
-    const idxNivel   = nivel ? HIERARQUIA.findIndex(n => n.toLowerCase() === nivel.toLowerCase()) : -1;
-
     try {
       const todas = await Storage.list(TABLES.requisicoes, {
         order: { column: 'urgente', ascending: false },
@@ -73,16 +70,12 @@ Pages.Aprovacoes = {
 
       this._pendentes = todas.filter(r => {
         if (!STATUS_APROVACAO.includes(r.status)) return false;
-
-        // Filtro por nivel_alcada: se definido, excluir reqs acima do nível do usuário
-        if (idxNivel >= 0) {
-          const idxReq = HIERARQUIA.findIndex(
-            n => n.toLowerCase() === (r.alcada_aprovacao || '').toLowerCase()
-          );
-          // Alcada da req maior que o nível do usuário → não pode aprovar
-          if (idxReq >= 0 && idxReq > idxNivel) return false;
+        // Filtro por nivel_alcadas: se definido, mostrar só reqs das alcadas atribuídas
+        if (nivel) {
+          const alcadaReqLow = (r.alcada_aprovacao || '').toLowerCase();
+          const niveisLow = nivel.map(n => n.toLowerCase());
+          if (alcadaReqLow && !niveisLow.includes(alcadaReqLow)) return false;
         }
-
         // Verificar se o usuário pode aprovar no status atual (respeita etapas configuradas)
         return FluxoAprovacao.podeAprovar(r.alcada_aprovacao, r.status, role, nivel);
       });
@@ -276,7 +269,7 @@ Pages.Aprovacoes = {
           <button class="aprov-btn-ver btn-ver-req" data-id="${Utils.escapeHtml(String(req.id))}">
             👁️ Ver Detalhes
           </button>
-          ${FluxoAprovacao.podeAprovar(req.alcada_aprovacao, req.status, App.currentUser?.role, App.currentUser?.nivel_alcada) ? `
+          ${FluxoAprovacao.podeAprovar(req.alcada_aprovacao, req.status, App.currentUser?.role, (App.currentUser?.nivel_alcadas || (App.currentUser?.nivel_alcada ? [App.currentUser.nivel_alcada] : [])) || null) ? `
           <button class="aprov-btn-avaliar btn-avaliar" data-id="${Utils.escapeHtml(String(req.id))}">
             ⚡ Avaliar
           </button>` : ''}
@@ -410,13 +403,12 @@ Pages.Aprovacoes = {
     const status = req.status;
     const isDiretoria = status === 'Aguardando Aprovacao da Diretoria';
 
-    // Só quem tem nivel_alcada = 'Diretor' OU role = 'diretor' (sem nivel restrito) libera para cotação
+    // Só quem tem nivel_alcadas incluindo 'Diretor' OU role = 'diretor' (sem nivel restrito) libera para cotação
     const userCurrent = App.currentUser;
-    const userNivel   = userCurrent?.nivel_alcada || null;
+    const userNiveisArr = userCurrent?.nivel_alcadas || (userCurrent?.nivel_alcada ? [userCurrent.nivel_alcada] : []);
     const userRole    = userCurrent?.role;
-    // Admin com nivel_alcada definido segue o nivel; admin sem nivel_alcada vai para Diretoria
-    const isDiretor   = userNivel
-      ? userNivel.toLowerCase() === 'diretor'
+    const isDiretor   = userNiveisArr.length > 0
+      ? userNiveisArr.some(n => n.toLowerCase() === 'diretor')
       : userRole === 'diretor';
     const proximoLabel = isDiretoria
       ? 'Liberar para Cotação'           // já está na etapa Diretoria — aprovação final
@@ -489,10 +481,10 @@ Pages.Aprovacoes = {
       const status  = req?.status || '';
       const agora   = new Date().toISOString();
 
-      // Libera para cotação apenas quem tem nivel_alcada = Diretor ou role = diretor
-      const nivelUser = user.nivel_alcada || null;
-      const isDiretor = nivelUser
-        ? nivelUser.toLowerCase() === 'diretor'
+      // Libera para cotação apenas quem tem nivel_alcadas incluindo Diretor ou role = diretor
+      const nivelUserArr = user.nivel_alcadas || (user.nivel_alcada ? [user.nivel_alcada] : []);
+      const isDiretor = nivelUserArr.length > 0
+        ? nivelUserArr.some(n => n.toLowerCase() === 'diretor')
         : user.role === 'diretor';
       const isDiretoriaStatus = status === 'Aguardando Aprovacao da Diretoria';
       let novoStatus;

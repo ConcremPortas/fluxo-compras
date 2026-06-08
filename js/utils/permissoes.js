@@ -67,7 +67,7 @@ const Permissoes = {
 
   _grupos:    {},   // { role: { tela: { acao: bool } } }
   _usuarios:  {},   // { userId: { tela: { acao: bool } } }
-  _userMeta:  {},   // { userId: { nivel_alcada: string, ... } }
+  _userMeta:  {},   // { userId: { nivel_alcadas: string[], nivel_alcada?: string (legado), ... } }
   _lideres:   {},   // { role: [userId, ...] }
   _carregado: false,
 
@@ -209,6 +209,14 @@ const Permissoes = {
       const perms = this._grupos[role] || _DEFAULTS[role] || {};
       App.PERMISSIONS[role] = Object.keys(perms).filter(tela => perms[tela]?.ver);
     });
+  },
+
+  /* ── Retorna array de alcadas do usuário (normaliza string ou array) */
+  getNiveisAlcada(userId) {
+    const meta = this._userMeta[userId] || {};
+    if (Array.isArray(meta.nivel_alcadas) && meta.nivel_alcadas.length > 0) return meta.nivel_alcadas;
+    if (meta.nivel_alcada) return [meta.nivel_alcada];
+    return [];
   },
 };
 

@@ -54,49 +54,73 @@ var FluxoAprovacao = (function() {
   function podeAprovar(alcada, statusAtual, roleUsuario, nivelAlcada) {
     const HIER = ['supervisor', 'gerente', 'diretor'];
 
-    // Role efetivo para verificação: nivel_alcada restringe admin; sem nivel → role livre
-    const roleEfetivo = nivelAlcada ? nivelAlcada.toLowerCase() : roleUsuario;
-    const idxEfetivo  = HIER.indexOf(roleEfetivo);
+    // Normalizar nivelAlcada para array (compat string legada)
+    const alcadasArr = !nivelAlcada ? [] :
+      (Array.isArray(nivelAlcada) ? nivelAlcada : [nivelAlcada])
+      .map(n => n.toLowerCase()).filter(n => HIER.includes(n));
 
-    if (nivelAlcada) {
-      // Com nivel_alcada: checar se a alcada da requisição está dentro do nível do usuário
-      const idxReq = HIER.indexOf((alcada || '').toLowerCase());
-      if (idxEfetivo >= 0 && idxReq >= 0 && idxReq > idxEfetivo) return false;
-      // Admin com nivel_alcada é tratado como aquele nível — não aprova além disso
+    if (alcadasArr.length > 0) {
+      // Com nivel_alcadas: checar se a alcada da requisição é uma das atribuídas ao usuário
+      const alcadaReqLow = (alcada || '').toLowerCase();
+      if (alcadaReqLow && !alcadasArr.includes(alcadaReqLow)) return false;
+
+      const cfg = _config[alcada];
+      if (!cfg) {
+        if (statusAtual === 'Aguardando Aprovacao da Diretoria') {
+          return alcadasArr.some(r => ['diretor', 'gerente'].includes(r));
+        }
+        if (statusAtual === 'Aguardando Aprovacao Etapa 1' ||
+            statusAtual === 'Aguardando Avaliacao de Compras') {
+          return alcadasArr.some(r => ['gerente', 'supervisor'].includes(r));
+        }
+        return false;
+      }
+      if (!cfg.usa_dupla_aprovacao) {
+        return statusAtual === 'Aguardando Aprovacao da Diretoria' &&
+               alcadasArr.some(r => ['diretor', 'gerente'].includes(r));
+      }
+      if (statusAtual === 'Aguardando Aprovacao Etapa 1' ||
+          statusAtual === 'Aguardando Avaliacao de Compras') {
+        return alcadasArr.includes((cfg.etapa1_role || '').toLowerCase());
+      }
+      if (statusAtual === 'Aguardando Aprovacao Etapa 2') {
+        return alcadasArr.includes((cfg.etapa2_role || '').toLowerCase());
+      }
+      if (statusAtual === 'Aguardando Aprovacao da Diretoria') {
+        return alcadasArr.some(r => ['diretor', 'gerente'].includes(r));
+      }
+      return false;
     } else {
-      // Sem nivel_alcada: admin pode tudo, supervisor não aprova nada por padrão
+      // Sem nivel_alcadas: admin pode tudo, supervisor não aprova nada por padrão
       if (roleUsuario === 'admin') return true;
       if (roleUsuario === 'supervisor') return false;
     }
 
     const cfg = _config[alcada];
     if (!cfg) {
-      // Fallback sem config
       if (statusAtual === 'Aguardando Avaliacao de Compras' ||
           statusAtual === 'Aguardando Aprovacao Etapa 1' ||
           statusAtual === 'Aguardando Aprovacao Etapa 2') {
-        return ['gerente', 'supervisor'].includes(roleEfetivo);
+        return ['gerente', 'supervisor'].includes(roleUsuario);
       }
       if (statusAtual === 'Aguardando Aprovacao da Diretoria') {
-        return ['diretor', 'gerente'].includes(roleEfetivo);
+        return ['diretor', 'gerente'].includes(roleUsuario);
       }
       return false;
     }
     if (!cfg.usa_dupla_aprovacao) {
       return statusAtual === 'Aguardando Aprovacao da Diretoria' &&
-             ['diretor', 'gerente'].includes(roleEfetivo);
+             ['diretor', 'gerente'].includes(roleUsuario);
     }
-
     if (statusAtual === 'Aguardando Aprovacao Etapa 1' ||
         statusAtual === 'Aguardando Avaliacao de Compras') {
-      // Matching estrito: só aprova quem tem exatamente o role da etapa
-      return roleEfetivo === (cfg.etapa1_role || '').toLowerCase();
+      return roleUsuario === (cfg.etapa1_role || '').toLowerCase();
     }
     if (statusAtual === 'Aguardando Aprovacao Etapa 2') {
-      return roleEfetivo === (cfg.etapa2_role || '').toLowerCase();
+      return roleUsuario === (cfg.etapa2_role || '').toLowerCase();
     }
     if (statusAtual === 'Aguardando Aprovacao da Diretoria') {
-      return ['diretor', 'gerente'].includes(roleEfetivo);
+      return ['diretor', 'gerente'].includes(roleUsuario);
     }
     return false;
   }

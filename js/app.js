@@ -111,10 +111,10 @@ if (this.currentUser) {
 // Carregar permissões granulares (necessário ao refrescar a página)
 if (this.currentUser) {
       await Permissoes.carregar();
-      // Enrich session with nivel_alcada from _user_meta (in case session was saved without it)
-      const nivel = Permissoes._userMeta[this.currentUser.id]?.nivel_alcada;
-      if (nivel && !this.currentUser.nivel_alcada) {
-        this.currentUser.nivel_alcada = nivel;
+      // Enrich session with nivel_alcadas from _user_meta (in case session was saved without it)
+      const niveisAlcada = Permissoes.getNiveisAlcada(this.currentUser.id);
+      if (niveisAlcada.length > 0 && !this.currentUser.nivel_alcadas?.length) {
+        this.currentUser.nivel_alcadas = niveisAlcada;
         sessionStorage.setItem('fc_usuario_logado', JSON.stringify(this.currentUser));
       }
     }
@@ -562,17 +562,18 @@ if (this.currentUser) {
         'Aguardando Aprovacao da Diretoria',
       ];
       const HIERARQUIA_ALC = ['Supervisor', 'Gerente', 'Diretor'];
-      const nivelUser   = user.nivel_alcada || null;
-      const idxNivelUser = nivelUser ? HIERARQUIA_ALC.findIndex(n => n.toLowerCase() === nivelUser.toLowerCase()) : -1;
+      const niveisUser = Array.isArray(user.nivel_alcadas) && user.nivel_alcadas.length > 0
+        ? user.nivel_alcadas.map(n => n.toLowerCase())
+        : (user.nivel_alcada ? [user.nivel_alcada.toLowerCase()] : []);
 
       const totalAprovacoes = (requisicoes || []).filter(r => {
         if (!STATUS_APROVACAO.includes(r.status)) return false;
-        // Filtrar por nivel_alcada se definido — excluir reqs acima do nível
-        if (idxNivelUser >= 0) {
-          const idxReq = HIERARQUIA_ALC.findIndex(n => n.toLowerCase() === (r.alcada_aprovacao || '').toLowerCase());
-          if (idxReq >= 0 && idxReq > idxNivelUser) return false;
+        // Filtrar por nivel_alcadas se definido: mostrar só reqs das alcadas atribuídas
+        if (niveisUser.length > 0) {
+          const alcadaReq = (r.alcada_aprovacao || '').toLowerCase();
+          if (alcadaReq && !niveisUser.includes(alcadaReq)) return false;
         }
-        return FluxoAprovacao.podeAprovar(r.alcada_aprovacao, r.status, user.role, nivelUser);
+        return FluxoAprovacao.podeAprovar(r.alcada_aprovacao, r.status, user.role, niveisUser.length > 0 ? niveisUser : null);
       }).length;
       if (totalAprovacoes > 0) badges['aprovacoes'] = totalAprovacoes;
 

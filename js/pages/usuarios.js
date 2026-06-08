@@ -133,7 +133,10 @@ Pages.Usuarios = {
     const inicial    = (u.nome || '?').charAt(0).toUpperCase();
     const ativo      = u.ativo !== false;
     const senha      = u.senha || '—';
-    const nivelAlcada = userMeta[u.id]?.nivel_alcada || null;
+    const meta = userMeta[u.id] || {};
+    const niveisAlcada = Array.isArray(meta.nivel_alcadas)
+      ? meta.nivel_alcadas
+      : (meta.nivel_alcada ? [meta.nivel_alcada] : []);
 
     // Grupos onde este usuário consta no array de líderes
     const gruposLiderados = Object.keys(lideres).filter(r => {
@@ -169,8 +172,8 @@ Pages.Usuarios = {
           <span class="role-pill" style="--role-color:${cor};">${label}</span>
         </td>
         <td>
-          ${nivelAlcada
-            ? `<span class="role-pill" style="--role-color:#64748b;">${Utils.escapeHtml(nivelAlcada)}</span>`
+          ${niveisAlcada.length > 0
+            ? niveisAlcada.map(n => `<span class="role-pill" style="--role-color:#64748b;margin-right:3px;">${Utils.escapeHtml(n)}</span>`).join('')
             : `<span style="font-size:12px;color:#cbd5e1;">—</span>`}
         </td>
         <td>${liderBadge}</td>
@@ -232,15 +235,6 @@ Pages.Usuarios = {
       { placeholder: 'Selecione o perfil...', busca: false, limpar: false, rodape: false, value: 'solicitante' }
     );
 
-    // Instanciar CustomSelect de Nível de Alçada
-    this._csUsrNivel = CustomSelect.criar(
-      document.getElementById('cs-usr-nivel-alcada'),
-      [{ value: '', label: 'Sem permissão de aprovação' }].concat(
-        alcadas.map(a => ({ value: a.nome, label: a.nome }))
-      ),
-      { placeholder: 'Sem permissão de aprovação', busca: false, limpar: false, rodape: false, value: '' }
-    );
-
     if (id) {
       Storage.get(TABLES.usuarios, id).then(u => {
         if (!u) return;
@@ -251,8 +245,14 @@ Pages.Usuarios = {
 
         this._csUsrRole?.setValue(u.role || 'solicitante');
 
-        // nivel_alcada vem do userMeta, não do registro do usuário
-        this._csUsrNivel?.setValue(userMeta[id]?.nivel_alcada || '');
+        // nivel_alcadas: marcar checkboxes
+        const meta = userMeta[id] || {};
+        const niveisAtuais = Array.isArray(meta.nivel_alcadas)
+          ? meta.nivel_alcadas.map(n => n.toLowerCase())
+          : (meta.nivel_alcada ? [meta.nivel_alcada.toLowerCase()] : []);
+        document.querySelectorAll('.usr-alcada-cb').forEach(cb => {
+          cb.checked = niveisAtuais.includes(cb.value.toLowerCase());
+        });
 
         // Marca checkboxes dos grupos que este usuário lidera
         document.querySelectorAll('.usr-lider-cb').forEach(cb => {
@@ -298,9 +298,6 @@ Pages.Usuarios = {
   _formUsuario(id = null, alcadas = []) {
     const roles  = Object.entries(this.ROLE_LABELS);
     const isNovo = !id;
-    const opcoesAlcada = alcadas.map(a =>
-      `<option value="${Utils.escapeHtml(a.nome)}">${Utils.escapeHtml(a.nome)}</option>`
-    ).join('');
     const todosRoles = Object.entries(this.ROLE_LABELS);
 
     return `
@@ -320,8 +317,19 @@ Pages.Usuarios = {
           <div id="cs-usr-role"></div>
         </div>
         <div class="drawer-field">
-          <label class="drawer-label">Nível de Alçada</label>
-          <div id="cs-usr-nivel-alcada"></div>
+          <label class="drawer-label">Nível(eis) de Alçada</label>
+          <div style="display:flex;flex-wrap:wrap;gap:8px 16px;padding:8px 0;" id="usr-alcada-checkboxes">
+            ${alcadas.map(a => `
+              <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:#374151;
+                            font-family:'Manrope',sans-serif;cursor:pointer;">
+                <input type="checkbox" class="usr-alcada-cb" value="${Utils.escapeHtml(a.nome)}"
+                  style="width:15px;height:15px;accent-color:#64748b;cursor:pointer;">
+                ${Utils.escapeHtml(a.nome)}
+              </label>`).join('')}
+          </div>
+          <span style="font-size:11px;color:#9ca3af;display:block;margin-top:2px;">
+            Sem seleção: usuário não tem permissão de aprovação.
+          </span>
         </div>
       </div>
       <div class="drawer-field" id="usr-lider-grupo-wrap">
@@ -397,7 +405,7 @@ Pages.Usuarios = {
     const nome           = document.getElementById('usr-nome')?.value.trim();
     const email          = (document.getElementById('usr-email')?.value || '').trim().toLowerCase();
     const role           = this._csUsrRole?.getValue() || '';
-    const nivel_alcada   = this._csUsrNivel?.getValue() || null;
+    const nivel_alcadas  = Array.from(document.querySelectorAll('.usr-alcada-cb:checked')).map(cb => cb.value);
     const lider_do_grupo = Array.from(document.querySelectorAll('.usr-lider-cb:checked')).map(cb => cb.value);
     const ativo          = document.getElementById('usr-ativo')?.checked ?? true;
     const trocar_senha   = document.getElementById('usr-trocar-senha')?.checked ?? false;
@@ -430,7 +438,7 @@ Pages.Usuarios = {
           const msgErro = error?.message || result?.error;
           if (msgErro) {
             Components.Toast.error('Usuário salvo, mas erro ao alterar senha: ' + msgErro);
-            await this._salvarUserData(savedId, role, nivel_alcada, lider_do_grupo);
+            await this._salvarUserData(savedId, role, nivel_alcadas, lider_do_grupo);
             Components.Modal.hide();
             await this._carregar();
             return;
@@ -449,7 +457,7 @@ Pages.Usuarios = {
         Components.Toast.success('Usuário criado!');
       }
 
-      await this._salvarUserData(savedId, role, nivel_alcada, lider_do_grupo);
+      await this._salvarUserData(savedId, role, nivel_alcadas, lider_do_grupo);
       Components.Modal.hide();
       await this._carregar();
     } catch (e) {
@@ -479,7 +487,7 @@ Pages.Usuarios = {
     } catch { return {}; }
   },
 
-  async _salvarUserData(userId, role, nivelAlcada, gruposLiderados) {
+  async _salvarUserData(userId, role, niveisAlcada, gruposLiderados) {
     const configs = await Storage.list(TABLES.configPermissoes).catch(() => []);
     const existente = configs?.[0] || {};
     const permExistente = existente.permissoes
@@ -488,10 +496,13 @@ Pages.Usuarios = {
 
     // Atualiza _user_meta
     const userMeta = { ...(permExistente._user_meta || {}) };
-    if (nivelAlcada) {
-      userMeta[userId] = { ...(userMeta[userId] || {}), nivel_alcada: nivelAlcada };
+    const arr = Array.isArray(niveisAlcada) ? niveisAlcada.filter(Boolean) : (niveisAlcada ? [niveisAlcada] : []);
+    if (arr.length > 0) {
+      userMeta[userId] = { ...(userMeta[userId] || {}), nivel_alcadas: arr };
+      delete userMeta[userId].nivel_alcada; // limpa formato antigo
     } else {
       if (userMeta[userId]) {
+        delete userMeta[userId].nivel_alcadas;
         delete userMeta[userId].nivel_alcada;
         if (Object.keys(userMeta[userId]).length === 0) delete userMeta[userId];
       }
