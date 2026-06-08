@@ -11,6 +11,7 @@ Pages.Cotacoes = {
   _dados:           [],
   _filtrados:       [],
   _requisicoesDisp: [],
+  _reqSemCotacao:   [],
 
   _STATUS_FILTROS: [
     { status: '',                                    label: 'Todos'             },
@@ -81,13 +82,23 @@ Pages.Cotacoes = {
     }
 
     try {
-      this._dados = await Storage.list(TABLES.cotacoes, {
-        order: { column: 'created_at', ascending: false },
-      }) || [];
+      const [cotacoes, todasReqs] = await Promise.all([
+        Storage.list(TABLES.cotacoes, { order: { column: 'created_at', ascending: false } }),
+        Storage.list(TABLES.requisicoes).catch(() => []),
+      ]);
+      this._dados = cotacoes || [];
+
+      // Requisições aprovadas aguardando cotação (sem cotação em andamento)
+      const cotsAtivas = new Set((this._dados || [])
+        .filter(c => !['Concluida', 'Cancelada'].includes(c.status))
+        .map(c => c.requisicao_id).filter(Boolean));
+      this._reqSemCotacao = (todasReqs || []).filter(r =>
+        r.status === 'Em Cotacao' && !cotsAtivas.has(r.id)
+      );
 
       const pillsContainer = document.getElementById('pills-container-cot');
       if (pillsContainer) {
-        pillsContainer.innerHTML = this._renderPillsFiltro();
+        pillsContainer.innerHTML = this._renderBannerReqPendentes() + this._renderPillsFiltro();
       }
       document.getElementById('cot-status-pills')
         ?.addEventListener('click', e => {
@@ -105,6 +116,39 @@ Pages.Cotacoes = {
       console.error('[Cotacoes]', e);
       Components.Toast.error('Erro ao carregar cotações.');
     }
+  },
+
+  _renderBannerReqPendentes() {
+    const reqs = this._reqSemCotacao || [];
+    if (reqs.length === 0) return '';
+    const itens = reqs.slice(0, 5).map(r => `
+      <span style="display:inline-flex;align-items:center;gap:5px;background:rgba(255,255,255,.7);
+                   border:1px solid #fde68a;border-radius:6px;padding:3px 8px;font-size:12px;
+                   font-weight:600;color:#92400e;cursor:pointer;white-space:nowrap;"
+            onclick="Pages.Cotacoes._abrirDialogNovaDe('${Utils.escapeHtml(String(r.id))}')">
+        📋 ${Utils.escapeHtml(r.numero)}
+        <span style="font-weight:400;color:#b45309;">${Utils.escapeHtml(r.setor || '')}</span>
+        <span style="color:#15803d;font-weight:700;">${Utils.formatCurrency(r.valor_total)}</span>
+      </span>`).join('');
+    const extra = reqs.length > 5 ? `<span style="font-size:12px;color:#92400e;padding:4px 6px;">+${reqs.length - 5} mais</span>` : '';
+    return `
+      <div style="background:#fffbeb;border:1.5px solid #fde68a;border-radius:10px;
+                  padding:12px 16px;margin-bottom:12px;display:flex;flex-wrap:wrap;
+                  align-items:center;gap:8px;">
+        <span style="font-size:16px;">⚠️</span>
+        <span style="font-size:13px;font-weight:700;color:#92400e;white-space:nowrap;">
+          ${reqs.length} requisição${reqs.length > 1 ? 'ões' : ''} aprovada${reqs.length > 1 ? 's' : ''} aguardando cotação:
+        </span>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;">
+          ${itens}${extra}
+        </div>
+        <button onclick="Pages.Cotacoes._abrirDialogNova()"
+          style="margin-left:auto;padding:5px 12px;border-radius:7px;border:1.5px solid #f59e0b;
+                 background:#fef3c7;color:#92400e;font-size:12px;font-weight:700;cursor:pointer;
+                 white-space:nowrap;">
+          ＋ Nova Cotação
+        </button>
+      </div>`;
   },
 
   _renderPillsFiltro() {
@@ -263,6 +307,14 @@ Pages.Cotacoes = {
 
     document.getElementById('btn-cancelar-nova-cot')?.addEventListener('click', () => Components.Modal.hide());
     document.getElementById('btn-criar-cot')?.addEventListener('click', () => this._criarCotacao());
+  },
+
+  async _abrirDialogNovaDe(reqId) {
+    await this._abrirDialogNova();
+    // Pré-selecionar a requisição no CustomSelect após o modal abrir
+    if (this._csCotRequisicao && reqId) {
+      this._csCotRequisicao.setValue(String(reqId));
+    }
   },
 
   async _criarCotacao() {

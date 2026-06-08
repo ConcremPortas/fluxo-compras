@@ -595,10 +595,10 @@ if (this.currentUser) {
         if (pendQual > 0) badges['qualidade'] = pendQual;
       }
 
-      // COTAÇÕES — cotações aguardando aprovação do demandante
+      // COTAÇÕES — requisições aprovadas sem cotação + aguardando demandante
       if (['admin','gerente'].includes(user.role)) {
         const pendCot = (requisicoes || []).filter(r =>
-          r.status === 'Aguardando Aprovacao do Demandante'
+          r.status === 'Em Cotacao' || r.status === 'Aguardando Aprovacao do Demandante'
         ).length;
         if (pendCot > 0) badges['cotacoes'] = pendCot;
       }
