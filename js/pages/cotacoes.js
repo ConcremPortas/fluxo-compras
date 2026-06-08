@@ -522,6 +522,7 @@ Pages.DetalheCotacao = {
     });
     document.getElementById('btn-add-forn')?.addEventListener('click',   () => this._abrirDialogFornecedor());
     document.getElementById('btn-enviar-aprovacao')?.addEventListener('click', () => this._enviarParaAprovacao());
+    document.getElementById('btn-gerar-oc-direta')?.addEventListener('click',  () => this._gerarOCDireta());
     document.getElementById('btn-aprovar-demandante')?.addEventListener('click', () => this._aprovarDemandante());
     document.getElementById('btn-solicitar-revisao')?.addEventListener('click',  () => this._solicitarRevisao());
     document.getElementById('btn-reabrir-cotacao')?.addEventListener('click',    () => this._reabrirCotacao());
@@ -733,7 +734,7 @@ Pages.DetalheCotacao = {
       <div class="cot-envio-panel">
         <div class="cot-envio-header">
           <span class="cot-section-icon">📤</span>
-          <span class="cot-section-title">Enviar para Aprovação do Demandante</span>
+          <span class="cot-section-title">Finalizar Cotação</span>
         </div>
         <div style="padding:16px 20px;">
           <div style="margin-bottom:14px;">
@@ -751,7 +752,11 @@ Pages.DetalheCotacao = {
               placeholder="Descreva os critérios utilizados para selecionar este fornecedor..."
               >${Utils.escapeHtml(justificativaAtual || '')}</textarea>
           </div>
-          <div style="display:flex;justify-content:flex-end;">
+          <div style="display:flex;justify-content:flex-end;gap:8px;">
+            <button class="aprov-btn-cancelar-modal" id="btn-gerar-oc-direta"
+              style="background:#f0fdf4;color:hsl(142,70%,30%);border-color:#bbf7d0;">
+              ⚡ Gerar OC Diretamente
+            </button>
             <button class="aprov-btn-confirmar" id="btn-enviar-aprovacao">
               📤 Enviar para Aprovação do Demandante
             </button>
@@ -1050,6 +1055,100 @@ Pages.DetalheCotacao = {
       Components.Toast.error('Erro ao enviar para aprovação.');
       if (btn) { btn.disabled = false; btn.textContent = '📤 Enviar para Aprovação do Demandante'; }
     }
+  },
+
+  async _gerarOCDireta() {
+    const justificativa = document.getElementById('justificativa-selecao')?.value.trim();
+    const vencedor = this._cotacao.fornecedores.find(f => f.selecionado);
+
+    if (!vencedor)      { Components.Toast.warning('Selecione um fornecedor vencedor antes de gerar a OC.'); return; }
+    if (!justificativa) { Components.Toast.warning('A justificativa de seleção é obrigatória.'); return; }
+
+    Components.Modal.confirm({
+      title:        'Gerar OC Diretamente',
+      message:      `Gerar Ordem de Compra para "${vencedor.nome}" por ${Utils.formatCurrency(vencedor.valor_total)}?\n\nA aprovação do demandante será pulada.`,
+      type:         'success',
+      icon:         '⚡',
+      confirmLabel: 'Gerar OC',
+      onConfirm: async () => {
+        const btn = document.getElementById('btn-gerar-oc-direta');
+        if (btn) { btn.disabled = true; btn.textContent = '⏳ Gerando...'; }
+        try {
+          const user = App.currentUser;
+
+          // Marcar cotação como aprovada
+          await Storage.update(TABLES.cotacoes, this._cotacao.id, {
+            status:                'Aprovada',
+            aprovacao_demandante:  'Aprovada',
+            justificativa_selecao: justificativa,
+            fornecedor_vencedor:   vencedor.nome,
+            valor_total_final:     vencedor.valor_total,
+            fornecedores:          this._cotacao.fornecedores,
+          });
+
+          // Criar OC
+          let novaOC;
+          try {
+            const ordensExistentes = await Storage.list(TABLES.ordens).catch(() => []);
+            const ocExistente = (ordensExistentes || []).find(o =>
+              o.requisicao_id === this._cotacao.requisicao_id &&
+              !['Concluida', 'Cancelada'].includes(o.status)
+            );
+            if (ocExistente) {
+              Components.Toast.warning(`Já existe a OC ${ocExistente.numero} para esta requisição.`);
+              await Storage.update(TABLES.cotacoes, this._cotacao.id, {
+                status: 'Aguardando Aprovacao do Demandante',
+                aprovacao_demandante: 'Pendente',
+              }).catch(() => {});
+              await this.render(this._cotacao.id);
+              return;
+            }
+
+            novaOC = await Storage.create(TABLES.ordens, {
+              numero:             Utils.generateOC(ordensExistentes.length),
+              requisicao_id:      this._cotacao.requisicao_id,
+              numero_requisicao:  this._cotacao.requisicao_numero,
+              cotacao_id:         this._cotacao.id,
+              fornecedor_nome:    vencedor.nome,
+              fornecedor_id:      vencedor.id || null,
+              fornecedor_cnpj:    vencedor.cnpj || '',
+              fornecedor_contato: vencedor.contato || '',
+              itens:              vencedor.itens,
+              valor_total:        vencedor.valor_total,
+              condicao_pagamento: vencedor.condicao_pagamento || '',
+              status:             'Analise de Faturamento',
+            });
+          } catch (ocErr) {
+            await Storage.update(TABLES.cotacoes, this._cotacao.id, {
+              status:               'Em Andamento',
+              aprovacao_demandante: 'Pendente',
+            }).catch(() => {});
+            throw ocErr;
+          }
+
+          if (this._cotacao.requisicao_id) {
+            await Storage.update(TABLES.requisicoes, this._cotacao.requisicao_id, {
+              status: 'Ordem de Compra Gerada',
+            });
+            await Storage.create(TABLES.historico, {
+              requisicao_id:   this._cotacao.requisicao_id,
+              acao:            `OC ${novaOC.numero} Gerada (sem aprovação do demandante)`,
+              usuario:         user.nome,
+              usuario_email:   user.email,
+              status_anterior: 'Em Cotacao',
+              status_novo:     'Ordem de Compra Gerada',
+            });
+          }
+
+          Components.Toast.success(`OC ${novaOC.numero} gerada com sucesso!`);
+          await this.render(this._cotacao.id);
+        } catch (e) {
+          console.error('[DetalheCotacao] Erro ao gerar OC direta:', e);
+          Components.Toast.error('Erro ao gerar OC: ' + (e.message || e));
+          if (btn) { btn.disabled = false; btn.textContent = '⚡ Gerar OC Diretamente'; }
+        }
+      },
+    });
   },
 
   async _aprovarDemandante() {
