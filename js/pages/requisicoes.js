@@ -27,8 +27,9 @@ const ROLES_PODEM_CRIAR = ['admin', 'solicitante', 'supervisor', 'gerente'];
    A — LISTA DE REQUISIÇÕES
    ============================================================ */
 Pages.Requisicoes = {
-  _dados:     [],
-  _filtrados: [],
+  _dados:              [],
+  _filtrados:          [],
+  _csFilterSolicitante: null,
 
   _STATUS_FILTROS: [
     { status: '',                                   label: 'Todos'              },
@@ -75,7 +76,7 @@ Pages.Requisicoes = {
       <div id="pills-container"></div>
 
       <!-- Barra de filtros -->
-      <div class="req-filters-card">
+      <div class="req-filters-card" style="position:relative;z-index:50;overflow:visible;">
         <div class="req-search-wrap">
           <span class="req-search-icon">🔍</span>
           <input
@@ -86,6 +87,7 @@ Pages.Requisicoes = {
             autocomplete="off"
           />
         </div>
+        <div id="cs-filter-solicitante" style="min-width:160px;"></div>
         <div id="cs-filter-setor" style="min-width:160px;"></div>
         <button class="req-export-btn" id="btn-export-pdf">📄 PDF</button>
         <button class="req-export-btn" id="btn-export-excel">📊 Excel</button>
@@ -100,10 +102,17 @@ Pages.Requisicoes = {
     document.getElementById('search-req')
       ?.addEventListener('input', () => this._aplicarFiltros());
 
+    this._csFilterSolicitante = CustomSelect.criar(
+      document.getElementById('cs-filter-solicitante'),
+      [{ value: '', label: 'Todos os solicitantes' }],
+      { placeholder: 'Todos os solicitantes', busca: true, limpar: false, rodape: false, value: '',
+        onChange: () => this._aplicarFiltros() }
+    );
+
     this._csFilterSetor = CustomSelect.criar(
       document.getElementById('cs-filter-setor'),
       [{ value: '', label: 'Todos os setores' }],
-      { placeholder: 'Todos os setores', busca: false, limpar: false, rodape: false, value: '',
+      { placeholder: 'Todos os setores', busca: true, limpar: false, rodape: false, value: '',
         onChange: () => this._aplicarFiltros() }
     );
     document.getElementById('btn-nova-req')
@@ -174,6 +183,19 @@ Pages.Requisicoes = {
           this._aplicarFiltros();
         });
 
+      // Popular solicitantes no CustomSelect
+      const solicitantes = [...new Map(this._dados
+        .filter(r => r.solicitante_nome)
+        .map(r => [r.solicitante_email, { nome: r.solicitante_nome, email: r.solicitante_email }])
+      ).values()].sort((a, b) => a.nome.localeCompare(b.nome));
+      if (this._csFilterSolicitante) {
+        this._csFilterSolicitante.setOpcoes(
+          [{ value: '', label: 'Todos os solicitantes' }].concat(
+            solicitantes.map(s => ({ value: s.email, label: s.nome, sublabel: s.email }))
+          )
+        );
+      }
+
       // Popular setores no CustomSelect
       const setores = [...new Set(this._dados.map(r => r.setor).filter(Boolean))].sort();
       if (this._csFilterSetor) {
@@ -200,15 +222,17 @@ Pages.Requisicoes = {
   },
 
   _aplicarFiltros() {
-    const busca = (document.getElementById('search-req')?.value || '').toLowerCase().trim();
-    const setor = this._csFilterSetor?.getValue() || '';
+    const busca       = (document.getElementById('search-req')?.value || '').toLowerCase().trim();
+    const setor       = this._csFilterSetor?.getValue() || '';
+    const solicitante = this._csFilterSolicitante?.getValue() || '';
 
     this._filtrados = this._dados.filter(r => {
-      const matchBusca  = !busca || [r.numero, r.solicitante_nome, r.setor]
+      const matchBusca       = !busca || [r.numero, r.solicitante_nome, r.setor]
         .some(v => v && String(v).toLowerCase().includes(busca));
-      const matchStatus = !this._filtroStatusAtivo || r.status === this._filtroStatusAtivo;
-      const matchSetor  = !setor || r.setor === setor;
-      return matchBusca && matchStatus && matchSetor;
+      const matchStatus      = !this._filtroStatusAtivo || r.status === this._filtroStatusAtivo;
+      const matchSetor       = !setor || r.setor === setor;
+      const matchSolicitante = !solicitante || r.solicitante_email === solicitante;
+      return matchBusca && matchStatus && matchSetor && matchSolicitante;
     });
 
     const count = document.getElementById('results-count');
