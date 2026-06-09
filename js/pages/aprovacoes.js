@@ -6,9 +6,10 @@
 var Pages = window.Pages || {};
 
 Pages.Aprovacoes = {
-  _pendentes: [],
-  _porEtapa:  { etapa1: [], etapa2: [], diretoria: [] },
-  _etapaAtiva: null,
+  _pendentes:          [],
+  _porEtapa:           { etapa1: [], etapa2: [], diretoria: [] },
+  _etapaAtiva:         null,
+  _filtroSolicitantes: [],  // emails selecionados no filtro de usuário
 
   /* ----------------------------------------------------------
      RENDER PRINCIPAL
@@ -34,6 +35,8 @@ Pages.Aprovacoes = {
         </div>`;
       return;
     }
+
+    this._filtroSolicitantes = [];
 
     document.getElementById('main-content').innerHTML = `
       <div class="aprov-header">
@@ -115,32 +118,24 @@ Pages.Aprovacoes = {
     if (!wrap) return;
 
     const abas = [
-      {
-        key: 'etapa1', cor: '#3b82f6', bgAtivo: '#eff6ff',
-        label: '1ª Aprovação',
-        count: this._porEtapa.etapa1.length,
-        desc: 'Aguard. 1ª Etapa',
-      },
-      {
-        key: 'etapa2', cor: '#8b5cf6', bgAtivo: '#f5f3ff',
-        label: '2ª Aprovação',
-        count: this._porEtapa.etapa2.length,
-        desc: 'Aguard. 2ª Etapa',
-      },
-      {
-        key: 'diretoria', cor: '#f97316', bgAtivo: '#fff7ed',
-        label: '🏛️ Diretoria',
-        count: this._porEtapa.diretoria.length,
-        desc: 'Aguard. Diretoria',
-      },
+      { key: 'etapa1',    cor: '#3b82f6', bgAtivo: '#eff6ff', label: '1ª Aprovação',  count: this._porEtapa.etapa1.length    },
+      { key: 'etapa2',    cor: '#8b5cf6', bgAtivo: '#f5f3ff', label: '2ª Aprovação',  count: this._porEtapa.etapa2.length    },
+      { key: 'diretoria', cor: '#f97316', bgAtivo: '#fff7ed', label: '🏛️ Diretoria', count: this._porEtapa.diretoria.length },
     ];
 
-    wrap.innerHTML = abas.map(aba => {
+    // Solicitantes únicos em todas as etapas
+    const solicitantes = [...new Map(
+      this._pendentes.map(r => [r.solicitante_email, { email: r.solicitante_email, nome: r.solicitante_nome || r.solicitante_email }])
+    ).values()].sort((a, b) => (a.nome || '').localeCompare(b.nome || ''));
+
+    const sel    = this._filtroSolicitantes;
+    const temFil = sel.length > 0;
+
+    const pillsHtml = abas.map(aba => {
       const ativo = this._etapaAtiva === aba.key;
       return `
         <button class="req-status-pill ${ativo ? 'ativo' : ''}" data-etapa="${aba.key}"
-          style="--pill-cor:${aba.cor};${ativo ? 'background:' + aba.bgAtivo + ';border-color:' + aba.cor + ';color:' + aba.cor + ';' : ''}
-            display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:20px;
+          style="display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:20px;
             border:1.5px solid ${ativo ? aba.cor : '#E2E8F0'};cursor:pointer;
             font-size:13px;font-weight:600;font-family:'Manrope',sans-serif;
             background:${ativo ? aba.bgAtivo : 'white'};color:${ativo ? aba.cor : '#64748b'};
@@ -152,6 +147,57 @@ Pages.Aprovacoes = {
         </button>`;
     }).join('');
 
+    const dropdownHtml = solicitantes.length > 1 ? `
+      <div style="position:relative;" id="wrap-filtro-usuario">
+        <button id="btn-filtro-usuario"
+          style="display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:20px;
+            border:1.5px solid ${temFil ? '#3b82f6' : '#E2E8F0'};cursor:pointer;
+            font-size:13px;font-weight:600;font-family:'Manrope',sans-serif;
+            background:${temFil ? '#eff6ff' : 'white'};color:${temFil ? '#3b82f6' : '#64748b'};
+            transition:all 0.15s;">
+          👤 Solicitante
+          ${temFil ? `<span style="background:#3b82f6;color:white;border-radius:10px;
+              font-size:11px;font-weight:700;padding:1px 7px;min-width:20px;text-align:center;">
+            ${sel.length}</span>` : ''}
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <polyline points="6 9 12 15 18 9"/>
+          </svg>
+        </button>
+        <div id="dropdown-filtro-usuario"
+          style="display:none;position:absolute;top:calc(100% + 6px);left:0;z-index:200;
+            background:white;border:1.5px solid #E2E8F0;border-radius:10px;
+            box-shadow:0 8px 24px rgba(0,0,0,.10);min-width:220px;padding:8px 0;">
+          ${solicitantes.map(s => {
+            const checked = sel.includes(s.email);
+            return `
+              <label style="display:flex;align-items:center;gap:10px;padding:8px 14px;cursor:pointer;
+                            font-size:13px;color:#374151;font-family:'Manrope',sans-serif;
+                            transition:background .1s;" class="aprov-filtro-item"
+                onmouseenter="this.style.background='#F8FAFC'" onmouseleave="this.style.background=''">
+                <input type="checkbox" class="aprov-filtro-cb" value="${Utils.escapeHtml(s.email)}"
+                  ${checked ? 'checked' : ''}
+                  style="width:15px;height:15px;accent-color:#3b82f6;cursor:pointer;flex-shrink:0;">
+                <span style="font-weight:${checked ? '700' : '500'};">${Utils.escapeHtml(s.nome)}</span>
+              </label>`;
+          }).join('')}
+          ${temFil ? `
+            <div style="border-top:1px solid #F0F4F8;margin-top:4px;padding:6px 14px 2px;">
+              <button id="btn-limpar-filtro-usuario"
+                style="font-size:12px;color:#ef4444;font-weight:600;background:none;
+                  border:none;cursor:pointer;padding:0;font-family:'Manrope',sans-serif;">
+                ✕ Limpar filtro
+              </button>
+            </div>` : ''}
+        </div>
+      </div>` : '';
+
+    wrap.innerHTML = `
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+        ${pillsHtml}
+        ${dropdownHtml}
+      </div>`;
+
+    // Eventos das pills de etapa
     wrap.querySelectorAll('[data-etapa]').forEach(btn => {
       btn.addEventListener('click', () => {
         this._etapaAtiva = btn.dataset.etapa;
@@ -159,6 +205,40 @@ Pages.Aprovacoes = {
         this._renderLista();
       });
     });
+
+    // Dropdown de usuário
+    const btnFiltro = document.getElementById('btn-filtro-usuario');
+    const dropdown  = document.getElementById('dropdown-filtro-usuario');
+    if (btnFiltro && dropdown) {
+      btnFiltro.addEventListener('click', (e) => {
+        e.stopPropagation();
+        dropdown.style.display = dropdown.style.display === 'none' ? 'block' : 'none';
+      });
+      // Fechar ao clicar fora
+      document.addEventListener('click', function _fechar(e) {
+        if (!document.getElementById('wrap-filtro-usuario')?.contains(e.target)) {
+          dropdown.style.display = 'none';
+          document.removeEventListener('click', _fechar);
+        }
+      });
+      // Checkboxes
+      dropdown.querySelectorAll('.aprov-filtro-cb').forEach(cb => {
+        cb.addEventListener('change', () => {
+          this._filtroSolicitantes = Array.from(
+            dropdown.querySelectorAll('.aprov-filtro-cb:checked')
+          ).map(c => c.value);
+          this._renderFiltros();
+          this._renderLista();
+        });
+      });
+      // Limpar
+      document.getElementById('btn-limpar-filtro-usuario')?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this._filtroSolicitantes = [];
+        this._renderFiltros();
+        this._renderLista();
+      });
+    }
   },
 
   /* ----------------------------------------------------------
@@ -168,7 +248,12 @@ Pages.Aprovacoes = {
     const container = document.getElementById('aprov-lista');
     if (!container) return;
 
-    const reqs = this._porEtapa[this._etapaAtiva] || [];
+    let reqs = this._porEtapa[this._etapaAtiva] || [];
+
+    // Filtro de solicitantes
+    if (this._filtroSolicitantes.length > 0) {
+      reqs = reqs.filter(r => this._filtroSolicitantes.includes(r.solicitante_email));
+    }
 
     if (!reqs.length) {
       const labels = { etapa1: '1ª Aprovação', etapa2: '2ª Aprovação', diretoria: 'Diretoria' };
