@@ -20,7 +20,7 @@ Pages.Catalogo = {
      RENDER PRINCIPAL
   ---------------------------------------------------------- */
   async render() {
-    document.title = 'Catálogo de Itens';
+    document.title = 'Fluxo Compras · Concrem';
     App.setPageTitle('Catálogo de Itens');
 
     const user   = App.currentUser;

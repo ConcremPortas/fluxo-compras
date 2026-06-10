@@ -8,7 +8,7 @@ var Pages = window.Pages || {};
 Pages.Login = {
 
   render() {
-    document.title = 'Entrar';
+    document.title = 'Fluxo Compras · Concrem';
 
     const app = document.getElementById('app');
     app.className = 'login-mode';

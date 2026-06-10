@@ -11,7 +11,7 @@ Pages.Recebimento = {
   ocAtual:      null,
 
   async render() {
-    document.title = 'Recebimento de Material';
+    document.title = 'Fluxo Compras · Concrem';
     App.setPageTitle('Recebimento');
 
     document.getElementById('main-content').innerHTML = `

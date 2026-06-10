@@ -49,7 +49,7 @@ Pages.Requisicoes = {
   _filtroStatusAtivo: 'Aguardando Avaliacao de Compras',
 
   async render() {
-    document.title = 'Requisições';
+    document.title = 'Fluxo Compras · Concrem';
     App.setPageTitle('Requisições');
 
     const user   = App.currentUser;
@@ -490,7 +490,7 @@ Pages.NovaRequisicao = {
   },
 
   async render() {
-    document.title = 'Nova Requisição';
+    document.title = 'Fluxo Compras · Concrem';
     App.setPageTitle('Nova Requisição');
 
     const user    = App.currentUser;
@@ -1245,7 +1245,7 @@ Pages.RequisicaoDetalhe = {
   _historico: [],
 
   async render(id) {
-    document.title = 'Detalhes da Requisição';
+    document.title = 'Fluxo Compras · Concrem';
     App.setPageTitle('Carregando...');
 
     const content = document.getElementById('main-content');
@@ -1575,7 +1575,7 @@ Pages.EditarRequisicao = {
   _setores:    [],
 
   async render(id) {
-    document.title = 'Editar Requisição';
+    document.title = 'Fluxo Compras · Concrem';
     App.setPageTitle('Editando...');
 
     const content = document.getElementById('main-content');

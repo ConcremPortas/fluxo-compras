@@ -19,7 +19,7 @@ Pages.Usuarios = {
   },
 
   async render() {
-    document.title = 'Usuários';
+    document.title = 'Fluxo Compras · Concrem';
     App.setPageTitle('Usuários');
 
     // Permite: admin, quem tem permissão de usuários, ou líder de grupo

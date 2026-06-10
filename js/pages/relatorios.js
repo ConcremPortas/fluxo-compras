@@ -24,7 +24,7 @@ Pages.Relatorios = {
      RENDER PRINCIPAL
   ---------------------------------------------------------- */
   async render() {
-    document.title = 'Relatórios';
+    document.title = 'Fluxo Compras · Concrem';
     App.setPageTitle('Relatórios');
 
     document.getElementById('main-content').innerHTML = `

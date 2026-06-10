@@ -16,7 +16,7 @@ Pages.Qualidade = {
   },
 
   async render() {
-    document.title = 'Controle de Qualidade';
+    document.title = 'Fluxo Compras · Concrem';
     App.setPageTitle('Qualidade');
 
     document.getElementById('main-content').innerHTML = `

@@ -3,7 +3,7 @@
    Estratégia: network-first para JS/HTML, cache-first para imagens/CSS
 ============================================================ */
 
-const CACHE_NAME = 'fluxocompras-v7';
+const CACHE_NAME = 'fluxocompras-v8';
 
 // Apenas imagens e fontes locais ficam em cache (raramente mudam)
 const ASSETS_ESTATICOS = [

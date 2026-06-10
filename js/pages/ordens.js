@@ -16,7 +16,7 @@ Pages.Ordens = {
   _busca:        '',
 
   render() {
-    document.title = 'Ordens de Compra';
+    document.title = 'Fluxo Compras · Concrem';
     App.setPageTitle('Ordens de Compra');
 
     document.getElementById('main-content').innerHTML = `
@@ -215,7 +215,7 @@ Pages.DetalheOrdem = {
   _starSelecionada: 0,
 
   async render(id) {
-    document.title = 'Detalhe da Ordem';
+    document.title = 'Fluxo Compras · Concrem';
     App.setPageTitle('Ordem de Compra');
 
     const content = document.getElementById('main-content');

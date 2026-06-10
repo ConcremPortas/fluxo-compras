@@ -14,7 +14,7 @@ Pages.Fornecedores = {
   MEDALHAS: ['🥇', '🥈', '🥉', '4º', '5º'],
 
   async render() {
-    document.title = 'Fornecedores';
+    document.title = 'Fluxo Compras · Concrem';
     App.setPageTitle('Fornecedores');
 
     document.getElementById('main-content').innerHTML = `
