@@ -3,13 +3,14 @@
    Estratégia: network-first para JS/HTML, cache-first para imagens/CSS
 ============================================================ */
 
-const CACHE_NAME = 'fluxocompras-v8';
+const CACHE_NAME = 'fluxocompras-v9';
 
 // Apenas imagens e fontes locais ficam em cache (raramente mudam)
 const ASSETS_ESTATICOS = [
   '/Logos/logo-cores.png',
   '/Logos/concrem-logo.png',
-  '/Logos/Isotipo-CorBranco.png',
+  '/Logos/icon-app-192.png',
+  '/Logos/icon-app-512.png',
 ];
 
 self.addEventListener('install', event => {
