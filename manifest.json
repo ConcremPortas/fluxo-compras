@@ -10,13 +10,13 @@
   "lang": "pt-BR",
   "icons": [
     {
-      "src": "Logos/Isotipo-Cores.png",
+      "src": "Logos/Isotipo-CorBranco.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "Logos/Isotipo-Cores.png",
+      "src": "Logos/Isotipo-CorBranco.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
