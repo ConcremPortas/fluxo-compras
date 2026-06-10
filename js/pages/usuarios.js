@@ -19,7 +19,7 @@ Pages.Usuarios = {
   },
 
   async render() {
-    document.title = 'Fluxo Compras — Usuários';
+    document.title = 'Usuários';
     App.setPageTitle('Usuários');
 
     // Permite: admin, quem tem permissão de usuários, ou líder de grupo

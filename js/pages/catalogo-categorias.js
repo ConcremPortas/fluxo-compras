@@ -12,7 +12,7 @@ Pages.CatalogoCategorias = {
      RENDER
   ---------------------------------------------------------- */
   async render() {
-    document.title = 'FluxoCompras — Categorias do Catálogo';
+    document.title = 'Categorias do Catálogo';
     App.setPageTitle('Categorias do Catálogo');
 
     const canEdit = ['admin', 'gerente'].includes(App.currentUser?.role);

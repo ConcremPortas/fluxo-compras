@@ -7,7 +7,7 @@ var Pages = window.Pages || {};
 Pages.FornecedoresCadastro = {
 
   async render() {
-    document.title = 'Fluxo Compras — Fornecedores';
+    document.title = 'Fornecedores';
     App.setPageTitle('Fornecedores');
 
     const role = App.currentUser?.role;

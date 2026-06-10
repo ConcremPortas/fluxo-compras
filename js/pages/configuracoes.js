@@ -57,7 +57,7 @@ Pages.Configuracoes = {
      RENDER PRINCIPAL
   ---------------------------------------------------------- */
   async render() {
-    document.title = 'Fluxo Compras — Configurações';
+    document.title = 'Configurações';
     App.setPageTitle('Configurações');
 
     const user    = App.currentUser;
@@ -563,7 +563,7 @@ Pages.Configuracoes = {
      ABA — FLUXO DE APROVAÇÕES
      ============================================================ */
   async carregarAbaFluxo() {
-    document.title = 'Fluxo Compras — Fluxo de Aprovação';
+    document.title = 'Fluxo de Aprovação';
     App.setPageTitle('Fluxo de Aprovação');
 
     const container = document.getElementById('main-content');
@@ -1463,7 +1463,7 @@ Pages.Configuracoes = {
    ============================================================ */
 Pages.CentrosCusto = {
   async render() {
-    document.title = 'Fluxo Compras — Centros de Custo';
+    document.title = 'Centros de Custo';
     App.setPageTitle('Centros de Custo');
 
     if (!Permissoes.pode('centros-custo', 'ver')) {
@@ -1484,7 +1484,7 @@ Pages.CentrosCusto = {
    ============================================================ */
 Pages.Alcadas = {
   async render() {
-    document.title = 'Fluxo Compras — Alçadas';
+    document.title = 'Alçadas';
     App.setPageTitle('Alçadas');
 
     if (!Permissoes.pode('alcadas', 'ver')) {

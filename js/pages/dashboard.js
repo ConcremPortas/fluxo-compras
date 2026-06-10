@@ -11,7 +11,7 @@ Pages.Dashboard = {
   _filtroAno: null,
 
   render() {
-    document.title = 'Fluxo Compras — Dashboard';
+    document.title = 'Dashboard';
     App.setPageTitle('Dashboard');
 
     const now = new Date();

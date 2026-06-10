@@ -26,7 +26,7 @@ Pages.Cotacoes = {
   _filtroStatusAtivo: 'Em Andamento',
 
   async render() {
-    document.title = 'Fluxo Compras — Cotações';
+    document.title = 'Cotações';
     App.setPageTitle('Cotações');
 
     document.getElementById('main-content').innerHTML = `
@@ -375,7 +375,7 @@ Pages.DetalheCotacao = {
   async render(id) {
     // Cancelar qualquer save pendente da sessão anterior antes de carregar nova
     this._cancelarSaveTimer();
-    document.title = 'Fluxo Compras — Cotação';
+    document.title = 'Cotação';
     App.setPageTitle('Carregando...');
 
     const content = document.getElementById('main-content');

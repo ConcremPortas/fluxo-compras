@@ -16,7 +16,7 @@ Pages.Qualidade = {
   },
 
   async render() {
-    document.title = 'Fluxo Compras — Controle de Qualidade';
+    document.title = 'Controle de Qualidade';
     App.setPageTitle('Qualidade');
 
     document.getElementById('main-content').innerHTML = `

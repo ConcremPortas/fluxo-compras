@@ -15,7 +15,7 @@ Pages.Aprovacoes = {
      RENDER PRINCIPAL
   ---------------------------------------------------------- */
   async render() {
-    document.title = 'Fluxo Compras — Aprovações';
+    document.title = 'Aprovações';
     App.setPageTitle('Aprovações');
 
     const user = App.currentUser;
