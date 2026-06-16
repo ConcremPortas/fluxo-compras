@@ -1431,7 +1431,7 @@ Pages.RequisicaoDetalhe = {
           ${req.observacoes ? `
             <div class="req-obs-wrap" style="${(req.fornecedor_sugerido || req.forma_pagamento) ? 'border-top:1px solid #E2E8F0;padding-top:14px;' : 'padding-top:16px;'}">
               <div class="req-info-add-label" style="margin-bottom:6px">Observações</div>
-              <p class="req-obs-text">${Utils.linkificar(req.observacoes)}</p>
+              <p class="req-obs-text" style="white-space:pre-wrap">${Utils.linkificar(req.observacoes)}</p>
             </div>` : ''}
         </div>` : ''}
 
