@@ -66,21 +66,6 @@ var FluxoAprovacao = (function() {
      Verificar se usuário pode aprovar neste status/alçada
   ---------------------------------------------------------- */
   function podeAprovar(alcada, statusAtual, roleUsuario, nivelAlcada) {
-    const resultado = _podeAprovarImpl(alcada, statusAtual, roleUsuario, nivelAlcada);
-    if ((alcada || '').toLowerCase() === 'gerente') {
-      const cfg = _cfgOf(alcada);
-      console.warn('[APROV DEBUG] alcada=' + alcada +
-        ' status=' + statusAtual +
-        ' resultado=' + resultado +
-        ' cfg.usa_dupla=' + (cfg ? cfg.usa_dupla_aprovacao : 'SEM_CFG') +
-        ' cfg.etapa2_role=' + (cfg ? cfg.etapa2_role : 'SEM_CFG') +
-        ' configKeys=' + JSON.stringify(Object.keys(_config))
-      );
-    }
-    return resultado;
-  }
-
-  function _podeAprovarImpl(alcada, statusAtual, roleUsuario, nivelAlcada) {
     const HIER = ['supervisor', 'gerente', 'diretor'];
 
     // Normalizar nivelAlcada para array (compat string legada)
@@ -115,10 +100,14 @@ var FluxoAprovacao = (function() {
       }
       if (statusAtual === 'Aguardando Aprovacao Etapa 1' ||
           statusAtual === 'Aguardando Avaliacao de Compras') {
-        return alcadasArr.includes((cfg.etapa1_role || '').toLowerCase());
+        const role1 = (cfg.etapa1_role || '').toLowerCase();
+        if (!role1) return alcadasArr.some(r => ['supervisor', 'gerente'].includes(r));
+        return alcadasArr.includes(role1);
       }
       if (statusAtual === 'Aguardando Aprovacao Etapa 2') {
-        return alcadasArr.includes((cfg.etapa2_role || '').toLowerCase());
+        const role2 = (cfg.etapa2_role || '').toLowerCase();
+        if (!role2) return alcadasArr.some(r => ['gerente', 'diretor'].includes(r));
+        return alcadasArr.includes(role2);
       }
       if (statusAtual === 'Aguardando Aprovacao da Diretoria') {
         return alcadasArr.some(r => ['diretor', 'gerente'].includes(r));
@@ -148,10 +137,14 @@ var FluxoAprovacao = (function() {
     }
     if (statusAtual === 'Aguardando Aprovacao Etapa 1' ||
         statusAtual === 'Aguardando Avaliacao de Compras') {
-      return roleUsuario === (cfg.etapa1_role || '').toLowerCase();
+      const role1 = (cfg.etapa1_role || '').toLowerCase();
+      if (!role1) return ['gerente', 'supervisor'].includes(roleUsuario);
+      return roleUsuario === role1;
     }
     if (statusAtual === 'Aguardando Aprovacao Etapa 2') {
-      return roleUsuario === (cfg.etapa2_role || '').toLowerCase();
+      const role2 = (cfg.etapa2_role || '').toLowerCase();
+      if (!role2) return ['gerente', 'diretor'].includes(roleUsuario);
+      return roleUsuario === role2;
     }
     if (statusAtual === 'Aguardando Aprovacao da Diretoria') {
       return ['diretor', 'gerente'].includes(roleUsuario);
