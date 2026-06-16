@@ -83,6 +83,8 @@ Pages.Aprovacoes = {
         return FluxoAprovacao.podeAprovar(r.alcada_aprovacao, r.status, role, nivel);
       });
 
+      console.warn('[APROV DEBUG] _pendentes após filtro:', this._pendentes.map(r => r.numero + '|' + r.alcada_aprovacao + '|' + r.status));
+
       this._porEtapa = {
         etapa1: this._pendentes.filter(r =>
           r.status === 'Aguardando Aprovacao Etapa 1' ||

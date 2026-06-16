@@ -66,23 +66,27 @@ var FluxoAprovacao = (function() {
      Verificar se usuário pode aprovar neste status/alçada
   ---------------------------------------------------------- */
   function podeAprovar(alcada, statusAtual, roleUsuario, nivelAlcada) {
+    const resultado = _podeAprovarImpl(alcada, statusAtual, roleUsuario, nivelAlcada);
+    if ((alcada || '').toLowerCase() === 'gerente') {
+      const cfg = _cfgOf(alcada);
+      console.warn('[APROV DEBUG] alcada=' + alcada +
+        ' status=' + statusAtual +
+        ' resultado=' + resultado +
+        ' cfg.usa_dupla=' + (cfg ? cfg.usa_dupla_aprovacao : 'SEM_CFG') +
+        ' cfg.etapa2_role=' + (cfg ? cfg.etapa2_role : 'SEM_CFG') +
+        ' configKeys=' + JSON.stringify(Object.keys(_config))
+      );
+    }
+    return resultado;
+  }
+
+  function _podeAprovarImpl(alcada, statusAtual, roleUsuario, nivelAlcada) {
     const HIER = ['supervisor', 'gerente', 'diretor'];
 
     // Normalizar nivelAlcada para array (compat string legada)
     const alcadasArr = !nivelAlcada ? [] :
       (Array.isArray(nivelAlcada) ? nivelAlcada : [nivelAlcada])
       .map(n => n.toLowerCase()).filter(n => HIER.includes(n));
-
-    // DEBUG TEMPORÁRIO — remover após diagnóstico
-    if ((alcada || '').toLowerCase() === 'gerente') {
-      console.log('[podeAprovar DEBUG]', {
-        alcada, statusAtual, roleUsuario,
-        nivelAlcada,
-        alcadasArr,
-        cfg: _cfgOf(alcada),
-        _configKeys: Object.keys(_config),
-      });
-    }
 
     if (alcadasArr.length > 0) {
       // Com nivel_alcadas: checar se a alcada da requisição é uma das atribuídas ao usuário
