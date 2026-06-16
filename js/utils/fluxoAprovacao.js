@@ -73,6 +73,17 @@ var FluxoAprovacao = (function() {
       (Array.isArray(nivelAlcada) ? nivelAlcada : [nivelAlcada])
       .map(n => n.toLowerCase()).filter(n => HIER.includes(n));
 
+    // DEBUG TEMPORÁRIO — remover após diagnóstico
+    if ((alcada || '').toLowerCase() === 'gerente') {
+      console.log('[podeAprovar DEBUG]', {
+        alcada, statusAtual, roleUsuario,
+        nivelAlcada,
+        alcadasArr,
+        cfg: _cfgOf(alcada),
+        _configKeys: Object.keys(_config),
+      });
+    }
+
     if (alcadasArr.length > 0) {
       // Com nivel_alcadas: checar se a alcada da requisição é uma das atribuídas ao usuário
       const alcadaReqLow = (alcada || '').toLowerCase();
