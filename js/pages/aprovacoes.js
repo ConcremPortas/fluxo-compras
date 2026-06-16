@@ -46,6 +46,7 @@ Pages.Aprovacoes = {
       <div id="aprov-filtros" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;"></div>
       <div id="aprov-lista">${this._skeleton()}</div>`;
 
+    await FluxoAprovacao.carregar();
     await this._carregar();
   },
 
