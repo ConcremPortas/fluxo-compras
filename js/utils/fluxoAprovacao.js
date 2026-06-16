@@ -21,10 +21,24 @@ var FluxoAprovacao = (function() {
   }
 
   /* ----------------------------------------------------------
+     Lookup tolerante a caixa/espaços: a alçada da requisição
+     (alcada_aprovacao) e a chave salva no banco (config.alcada)
+     podem divergir em maiúsculas/minúsculas. Sem isso, a config
+     "some" e a requisição fica invisível em todas as abas.
+  ---------------------------------------------------------- */
+  function _cfgOf(alcada) {
+    if (!alcada) return null;
+    if (_config[alcada]) return _config[alcada];
+    const key = String(alcada).trim().toLowerCase();
+    const found = Object.keys(_config).find(k => String(k).trim().toLowerCase() === key);
+    return found ? _config[found] : null;
+  }
+
+  /* ----------------------------------------------------------
      Obter config de uma alçada
   ---------------------------------------------------------- */
   function getConfig(alcada) {
-    return _config[alcada] || null;
+    return _cfgOf(alcada);
   }
 
   function getAll() {
@@ -38,7 +52,7 @@ var FluxoAprovacao = (function() {
     if (decisao === 'devolver') return 'Devolvida ao Solicitante';
     if (decisao === 'reprovar') return 'Nao Aprovada';
 
-    const cfg = _config[alcada];
+    const cfg = _cfgOf(alcada);
     if (!cfg || !cfg.usa_dupla_aprovacao) return 'Em Cotacao';
 
     if (statusAtual === 'Aguardando Aprovacao Etapa 1' ||
@@ -64,7 +78,7 @@ var FluxoAprovacao = (function() {
       const alcadaReqLow = (alcada || '').toLowerCase();
       if (alcadaReqLow && !alcadasArr.includes(alcadaReqLow)) return false;
 
-      const cfg = _config[alcada];
+      const cfg = _cfgOf(alcada);
       if (!cfg) {
         if (statusAtual === 'Aguardando Aprovacao da Diretoria') {
           return alcadasArr.some(r => ['diretor', 'gerente'].includes(r));
@@ -72,6 +86,11 @@ var FluxoAprovacao = (function() {
         if (statusAtual === 'Aguardando Aprovacao Etapa 1' ||
             statusAtual === 'Aguardando Avaliacao de Compras') {
           return alcadasArr.some(r => ['gerente', 'supervisor'].includes(r));
+        }
+        // Sem config carregada para esta alçada: a Etapa 2 também precisa
+        // de um fallback, senão a requisição some de todas as abas.
+        if (statusAtual === 'Aguardando Aprovacao Etapa 2') {
+          return alcadasArr.some(r => ['gerente', 'diretor'].includes(r));
         }
         return false;
       }
@@ -96,7 +115,7 @@ var FluxoAprovacao = (function() {
       if (roleUsuario === 'supervisor') return false;
     }
 
-    const cfg = _config[alcada];
+    const cfg = _cfgOf(alcada);
     if (!cfg) {
       if (statusAtual === 'Aguardando Avaliacao de Compras' ||
           statusAtual === 'Aguardando Aprovacao Etapa 1' ||
@@ -129,7 +148,7 @@ var FluxoAprovacao = (function() {
      Label descritivo da etapa atual
   ---------------------------------------------------------- */
   function labelEtapa(alcada, statusAtual) {
-    const cfg = _config[alcada];
+    const cfg = _cfgOf(alcada);
     if (!cfg) return 'Aprovação';
     if (statusAtual === 'Aguardando Aprovacao Etapa 1' ||
         statusAtual === 'Aguardando Avaliacao de Compras') {
@@ -148,7 +167,7 @@ var FluxoAprovacao = (function() {
      Status inicial ao criar/reenviar requisição
   ---------------------------------------------------------- */
   function statusInicial(alcada) {
-    const cfg = _config[alcada];
+    const cfg = _cfgOf(alcada);
     if (!cfg) return 'Aguardando Aprovacao Etapa 1';
     if (!cfg.usa_dupla_aprovacao) return 'Aguardando Aprovacao da Diretoria';
     return 'Aguardando Aprovacao Etapa 1';
